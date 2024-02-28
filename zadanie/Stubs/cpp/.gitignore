@@ -1,0 +1,13 @@
+*.o
+*.out
+/bin/
+/build/
+*.exe
+*.so
+*.dll
+*.deps
+*.dSYM/
+.vscode/
+*.swp
+client
+server

@@ -1,0 +1,25 @@
+#ifndef TCP_CLIENT_H
+#define TCP_CLIENT_H
+
+#include <iostream>
+#include <cstring>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+
+
+class TCPClient {
+    public:
+        TCPClient(std::string ip_address, std::string port);
+        ~TCPClient();
+        void send(std::string message);
+        void connect();
+    private:
+        int _socket;
+        std::string ip_address;
+        std::string port;
+};
+
+
+#endif

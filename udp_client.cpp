@@ -1,25 +1,20 @@
-#include "tcp_client.h"
+#include "udp_client.h"
 
 
-TCPClient::TCPClient(std::string ip_address, std::string port) {
+UDPClient::UDPClient(std::string ip_address, std::string port){
     this->ip_address = ip_address;
     this->port = port;
-    connect();
+    create_socket();
 }
 
-TCPClient::~TCPClient() {
-    close(_socket);
-}
-
-
-void TCPClient::connect() {
+void UDPClient::create_socket() {
     int status;
     struct addrinfo hints;
-    struct addrinfo *servinfo;
+    
     std::memset(&hints, 0, sizeof hints);
     
     hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = 0;
     
     if ((status = getaddrinfo(ip_address.c_str(), port.c_str(), &hints, &servinfo)) != 0) {
@@ -32,18 +27,12 @@ void TCPClient::connect() {
         perror("socket");
         exit(1);
     }
-    
-    if (::connect(_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-        close(_socket);
-        perror("connect");
-        exit(1);
-    }
-
+  
     freeaddrinfo(servinfo);
 }
 
-void TCPClient::send(std::string message) {
-    ssize_t bytes_sent = ::send(_socket, message.c_str(), message.size(), 0);
+void UDPClient::send(std::string message) {
+    ssize_t bytes_sent = ::sendto(_socket, message.c_str(), message.size(), 0, this->servinfo->ai_addr, this->servinfo->ai_addrlen);
     if (bytes_sent == -1) {
         perror("send");
     }
@@ -55,7 +44,7 @@ int main() {
     std::string ip_address = "127.0.0.1";
     std::string port = "5553";
     
-    TCPClient client(ip_address, port);
+    UDPClient client(ip_address, port);
     client.send("Mam rad vlaky\n");
     
     return 0;

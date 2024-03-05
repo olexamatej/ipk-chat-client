@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
-
+#include <string>
 
 class TCPClient {
     public:
@@ -15,6 +15,7 @@ class TCPClient {
         ~TCPClient();
         void send(std::string message);
         void connect();
+        std::string receive();
     private:
         int _socket;
         std::string ip_address;

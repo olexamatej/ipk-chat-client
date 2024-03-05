@@ -50,13 +50,38 @@ void TCPClient::send(std::string message) {
     std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
+std::string TCPClient::receive(){
+    char buffer[1024];
+    ssize_t bytes_received = recv(_socket, buffer, sizeof(buffer), 0);
+    if (bytes_received == -1) {
+        perror("recv");
+        return "";
+    } else if (bytes_received == 0) {
+        std::cout << "Connection closed by " << ip_address << ":" << port << std::endl;
+        return "";
+    }
+    std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;
+    return std::string(buffer, bytes_received);
+}
+
+
 int main() {
 
     std::string ip_address = "127.0.0.1";
     std::string port = "5553";
     
-    TCPClient client(ip_address, port);
-    client.send("Mam rad vlaky\n");
+    // TCPClient client(ip_address, port);
+    // client.send("Mam rad vlaky\n");
     
+    TCPClient client(ip_address, port);
+    std::cout << "conntected \n";
+   while(1) {
+        std::string message = client.receive();
+        if (message.empty()) {
+            break;
+        }
+        std::cout << message << std::endl;
+    }
+
     return 0;
 }

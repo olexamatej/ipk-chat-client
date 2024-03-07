@@ -65,23 +65,21 @@ std::string TCPClient::receive(){
 }
 
 
-int main() {
-
-    std::string ip_address = "127.0.0.1";
-    std::string port = "5553";
+// int main() {
+//     std::string ip_address = "127.0.0.1";
+//     std::string port = "5553";
     
-    // TCPClient client(ip_address, port);
-    // client.send("Mam rad vlaky\n");
-    
-    TCPClient client(ip_address, port);
-    std::cout << "conntected \n";
-   while(1) {
-        std::string message = client.receive();
-        if (message.empty()) {
-            break;
-        }
-        std::cout << message << std::endl;
-    }
+//     // TCPClient client(ip_address, port);
+//     // client.send("Mam rad vlaky\n");
+//     TCPClient client(ip_address, port);
+//     std::cout << "conntected \n";
+//    while(1) {
+//         std::string message = client.receive();
+//         if (message.empty()) {
+//             break;
+//         }
+//         std::cout << message << std::endl;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }

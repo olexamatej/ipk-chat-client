@@ -39,13 +39,13 @@ void UDPClient::send(std::string message) {
     std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
-int main() {
+// int main() {
 
-    std::string ip_address = "127.0.0.1";
-    std::string port = "5553";
+//     std::string ip_address = "127.0.0.1";
+//     std::string port = "5553";
     
-    UDPClient client(ip_address, port);
-    client.send("Mam rad vlaky\n");
+//     UDPClient client(ip_address, port);
+//     client.send("Mam rad vlaky\n");
     
-    return 0;
-}
+//     return 0;
+// }

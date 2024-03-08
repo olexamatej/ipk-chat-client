@@ -17,7 +17,7 @@ int main() {
     TCPClient client(ip_address, port);
     std::cout << "Connected \n";
 
-    std::queue<Input> inputQueue;
+    std::queue<std::string> inputQueue;
     std::mutex queueMutex;
     std::condition_variable queueCondVar;
 
@@ -26,13 +26,12 @@ int main() {
      std::jthread inputThread([&](){
         std::string line;
         while (std::getline(std::cin, line)) {
-            std::cout << "Sending: " << line << std::endl;
 
             Input userInput;
             userInput.getNewInput(line);
 
             std::lock_guard<std::mutex> lock(queueMutex);
-            inputQueue.push(userInput);
+            inputQueue.push(userInput.parseInput());
             queueCondVar.notify_one(); 
 
         }
@@ -49,11 +48,11 @@ int main() {
                 continue;
             }
 
-            Input userInput = inputQueue.front();
+            std::string packet_to_send = inputQueue.front();
             inputQueue.pop();
             lock.unlock();
 
-            std::string message = userInput.getLine();
+            std::string message = packet_to_send;
             client.send(message);
 
         }

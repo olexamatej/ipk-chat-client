@@ -8,7 +8,7 @@
 class Input{
     public:
         void getNewInput(std::string line);
-        void ParseInput();
+        std::string parseInput();
         std::string getLine();
     protected:
         std::string line;

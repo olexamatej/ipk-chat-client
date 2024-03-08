@@ -32,4 +32,5 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 
 run:
+	make
 	./main

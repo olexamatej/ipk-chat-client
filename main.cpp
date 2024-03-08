@@ -43,7 +43,7 @@ int main() {
         //while first thread is running, this thread will be waiting for input
         while (true) {
             std::unique_lock<std::mutex> lock(queueMutex);
-            
+
             queueCondVar.wait(lock, [&] { return !inputQueue.empty(); });
             if(inputQueue.empty()){
                 continue;
@@ -59,6 +59,15 @@ int main() {
         }
     });
     
+    // std::jthread receiveThread([&]() {
+    //     while(1) {
+    //         std::string message = client.receive();
+    //         if (message.empty()) {
+    //             break;
+    //         }
+    //         std::cout << message << std::endl;
+    //     }
+    // });
 
     
 

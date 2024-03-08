@@ -1,6 +1,9 @@
 #include "inputParser.h"
 #include "packet_tcp.h"
 
+#define PACKET_TYPE MsgPacket, JoinPacket, AuthPacket
+
+
 CommandType getCommandType(std::string line){
     if(line.find("/join",0) == 0){
         return CommandType::JOIN;
@@ -18,7 +21,7 @@ CommandType getCommandType(std::string line){
 }
 
 
-std::string Input::parseInput(){
+std::variant<PACKET_TYPE> Input::parseInput(){
     CommandType type = getCommandType(this->line);
     std::vector<std::string> arguments;
     std::istringstream iss(this->line);
@@ -36,7 +39,7 @@ std::string Input::parseInput(){
         case CommandType::JOIN:{
             std::cout << "Joining" << std::endl;
             JoinPacket joinPacket(arguments, display_name);
-            return joinPacket.serialize();
+            return joinPacket;
         break;
         }
         case CommandType::AUTH:{
@@ -44,7 +47,7 @@ std::string Input::parseInput(){
             AuthPacket authPacket(arguments);
             id = authPacket.getData()[0];
             display_name = authPacket.getData()[1];
-            return authPacket.serialize();
+            return authPacket;
 
         break;
         }
@@ -63,7 +66,7 @@ std::string Input::parseInput(){
         default:{
             std::cout << "Sending message" << std::endl;
             MsgPacket msgPacket(display_name, this->line);
-            return msgPacket.serialize();
+            return msgPacket;
         }
         break;
     }

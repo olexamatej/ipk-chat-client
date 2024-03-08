@@ -1,5 +1,6 @@
 #include "tcp_client.h"
 #include "inputParser.h"
+#include "packet_tcp.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -17,11 +18,11 @@ int main() {
     TCPClient client(ip_address, port);
     std::cout << "Connected \n";
 
-    std::queue<std::string> inputQueue;
-    std::mutex queueMutex;
-    std::condition_variable queueCondVar;
+    std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
 
-     //thread for reading stdin, parsing them and sending them to other thread
+    std::mutex queue_mutex;
+    std::condition_variable queue_cond_var;
+
      //thread for reading stdin, parsing them and sending them to other thread
      std::jthread inputThread([&](){
         std::string line;
@@ -30,9 +31,9 @@ int main() {
             Input userInput;
             userInput.getNewInput(line);
 
-            std::lock_guard<std::mutex> lock(queueMutex);
-            inputQueue.push(userInput.parseInput());
-            queueCondVar.notify_one(); 
+            std::lock_guard<std::mutex> lock(queue_mutex);
+            input_packet_queue.push(userInput.parseInput());
+            queue_cond_var.notify_one(); 
 
         }
     });
@@ -41,19 +42,25 @@ int main() {
     std::jthread sendThread([&]() {
         //while first thread is running, this thread will be waiting for input
         while (true) {
-            std::unique_lock<std::mutex> lock(queueMutex);
+            std::unique_lock<std::mutex> lock(queue_mutex);
 
-            queueCondVar.wait(lock, [&] { return !inputQueue.empty(); });
-            if(inputQueue.empty()){
+            queue_cond_var.wait(lock, [&] { return !input_packet_queue.empty(); });
+            if(input_packet_queue.empty()){
                 continue;
             }
             
-            std::string packet_to_send = inputQueue.front();
-            inputQueue.pop();
+            //get the first packet from the queue and call .serialize
+
+            std::variant<PACKET_TYPE> packet = input_packet_queue.front();
+            std::string serialized_packet = "";
+            std::visit([&](auto& p) { serialized_packet = p.serialize(); }, packet);
+            
+            std::cout << serialized_packet << std::endl;
+
+            input_packet_queue.pop();
             lock.unlock();
 
-            std::string message = packet_to_send;
-            client.send(message);
+            client.send(serialized_packet);
 
         }
     });

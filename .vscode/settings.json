@@ -58,7 +58,8 @@
         "mutex": "cpp",
         "ranges": "cpp",
         "semaphore": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "variant": "cpp"
     },
     "cSpell.words": [
         "servinfo"

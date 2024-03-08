@@ -17,10 +17,14 @@ CommandType getCommandType(std::string line){
     return CommandType::ELSE;
 }
 
+
 std::string Input::parseInput(){
     CommandType type = getCommandType(this->line);
     std::vector<std::string> arguments;
     std::istringstream iss(this->line);
+
+    static std::string display_name = "";
+    static std::string id = "";
 
     for(std::string s; std::getline(iss, s, ' '); ) {
         arguments.push_back(s);
@@ -31,23 +35,34 @@ std::string Input::parseInput(){
     switch(type){
         case CommandType::JOIN:{
             std::cout << "Joining" << std::endl;
-            JoinPacket joinPacket(arguments[1], arguments[2]);
+            JoinPacket joinPacket(arguments, display_name);
             return joinPacket.serialize();
         break;
         }
         case CommandType::AUTH:{
             std::cout << "Authenticating" << std::endl;
-            AuthPacket authPacket(arguments[1], arguments[2], arguments[3]);
+            AuthPacket authPacket(arguments);
+            id = authPacket.getData()[0];
+            display_name = authPacket.getData()[1];
             return authPacket.serialize();
+
         break;
         }
         case CommandType::RENAME:
+            if(arguments.size() == 2){
+                std::cout << "Renaming" << std::endl;
+                display_name = arguments[1];
+            }
+            else{
+                std::cout << "Invalid number of arguments" << std::endl;
+                exit(1);
+            }
         break;
         case CommandType::HELP:
         break;
         default:{
             std::cout << "Sending message" << std::endl;
-            MsgPacket msgPacket("Matej", this->line);
+            MsgPacket msgPacket(display_name, this->line);
             return msgPacket.serialize();
         }
         break;

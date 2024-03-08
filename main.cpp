@@ -47,7 +47,7 @@ int main() {
             if(inputQueue.empty()){
                 continue;
             }
-
+            
             std::string packet_to_send = inputQueue.front();
             inputQueue.pop();
             lock.unlock();
@@ -58,15 +58,15 @@ int main() {
         }
     });
     
-    // std::jthread receiveThread([&]() {
-    //     while(1) {
-    //         std::string message = client.receive();
-    //         if (message.empty()) {
-    //             break;
-    //         }
-    //         std::cout << message << std::endl;
-    //     }
-    // });
+    std::jthread receiveThread([&]() {
+        while(1) {
+            std::string message = client.receive();
+            if (message.empty()) {
+                break;
+            }
+            std::cout << message << std::endl;
+        }
+    });
 
     
 

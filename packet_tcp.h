@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 
 class PacketTCP {
@@ -23,7 +24,7 @@ class MsgPacket : public PacketTCP {
 
 class JoinPacket : public PacketTCP {
     public:
-        JoinPacket(const std::string& dname, const std::string& id);
+        JoinPacket(const std::vector<std::string>& arguments, const std::string& dname);
         std::string serialize();
     protected:
         std::string dname;
@@ -32,9 +33,9 @@ class JoinPacket : public PacketTCP {
 
 class AuthPacket : public PacketTCP {
     public:
-        AuthPacket(const std::string& id, const std::string& dname, const std::string& secret);
+        AuthPacket(const std::vector<std::string>& arguments);
         std::string serialize();
-    protected:
+        std::vector<std::string> getData();
         std::string id;
         std::string dname;
         std::string secret;
@@ -42,11 +43,14 @@ class AuthPacket : public PacketTCP {
 
 class ErrorPacket : public PacketTCP {
     public:
-        ErrorPacket(const std::string& dname, const std::string& content);
+        ErrorPacket(const std::vector<std::string>& arguments);
         std::string serialize();
     protected:
         std::string dname;
         std::string content;
 };
+
+
+
 
 #endif // PACKET_TCP_H

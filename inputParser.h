@@ -6,8 +6,10 @@
 #include <string>
 #include <sstream>
 #include <variant>
+#include "connection.h"
 
-#define PACKET_TYPE MsgPacket, JoinPacket, AuthPacket
+
+#define PACKET_TYPE MsgPacket, JoinPacket, AuthPacket, NullPacket
 
 class Input{
     public:

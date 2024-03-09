@@ -115,6 +115,7 @@ std::vector<std::string> ErrorPacket::getData() {
 }
 
 
+
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data){
     std::istringstream iss(data);
     std::vector<std::string> tokens;
@@ -142,6 +143,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data){
     std::cout << "Invalid packet" << std::endl;
     exit(1);
 }
+
 
 
 // int main() {

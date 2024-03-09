@@ -66,6 +66,11 @@ class ReplyPacket : public PacketTCP {
         std::string content;
 };
 
+class NullPacket : public PacketTCP {
+    public:
+        std::string serialize(){return "";};
+};
+
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data);
 
 

@@ -1,8 +1,6 @@
 #include "inputParser.h"
 #include "packet_tcp.h"
 
-#define PACKET_TYPE MsgPacket, JoinPacket, AuthPacket
-
 
 CommandType getCommandType(std::string line){
     if(line.find("/join",0) == 0){

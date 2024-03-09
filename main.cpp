@@ -10,6 +10,8 @@
 #include <queue>
 #include <condition_variable>
 
+//TODO
+#define TIMEOUT 50
 
 int main() {
     std::string ip_address = "127.0.0.1";
@@ -17,6 +19,8 @@ int main() {
     
     TCPClient client(ip_address, port);
     std::cout << "Connected \n";
+
+    Connection connection = Connection(ip_address, port);
 
     std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
 
@@ -38,6 +42,10 @@ int main() {
         }
     });
 
+    std::condition_variable reply_cond_var;
+    std::mutex reply_mutex;
+    std::variant<PACKET_TYPE> send_packet = NullPacket();
+
     //thread for sending messages to server
     std::jthread sendThread([&]() {
         //while first thread is running, this thread will be waiting for input
@@ -50,32 +58,59 @@ int main() {
             }
             
             //get the first packet from the queue and call .serialize
+            send_packet = input_packet_queue.front();
 
-            std::variant<PACKET_TYPE> packet = input_packet_queue.front();
             std::string serialized_packet = "";
-            std::visit([&](auto& p) { serialized_packet = p.serialize(); }, packet);
-            
-            std::cout << serialized_packet << std::endl;
-
+            std::visit([&](auto& p) { serialized_packet = p.serialize(); }, send_packet);
+        
             input_packet_queue.pop();
             lock.unlock();
 
             client.send(serialized_packet);
 
+            if(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)){
+                  std::cout << "Waiting\n";
+                //give this mutex a timeout of 5 seconds
+
+                std::unique_lock<std::mutex> lock(reply_mutex);
+                if(reply_cond_var.wait_for(lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
+                    std::cout << "Timeout\n";
+                } else {
+                    std::cout << "Good\n";
+                    std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
+                }   
+            }
         }
     });
     
     std::jthread receiveThread([&]() {
         while(1) {
-            std::string message = client.receive();
-            if (message.empty()) {
-                break;
+            std::string reply = client.receive();
+            std::cout << "Received: ";
+            std::cout << reply << std::endl;            
+            
+            //print message that was sent
+
+
+            std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply);
+            std::vector<std::string> packet_data;
+            if(std::holds_alternative<ReplyPacket>(recv_packet)){
+                std::visit([&](auto& p) { packet_data = p.getData(); }, recv_packet);
+                std::cout << packet_data[0] << std::endl;
+                if(packet_data[0] == "1"){
+                    std::cout << "Success\n";
+                } else {
+                    std::cout << "Failure\n";
+                    if(std::holds_alternative<AuthPacket>(send_packet)){
+                        std::cout << "Authentication failed\n";
+                    }
+                }
             }
-            std::cout << message << std::endl;
+            
+            std::unique_lock<std::mutex> lock(reply_mutex);
+            reply_cond_var.notify_one();
         }
     });
-
-    
 
     return 0;
 }

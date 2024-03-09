@@ -4,11 +4,16 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <variant>
+#include <string>
+
+#define RECV_PACKET_TYPE MsgPacket, ErrorPacket, ReplyPacket
 
 
 class PacketTCP {
     public:
-        virtual std::string serialize() = 0;
+        virtual std::string serialize(){return "";};
     protected:
         std::string input;
 };
@@ -17,6 +22,7 @@ class MsgPacket : public PacketTCP {
     public:
         MsgPacket(const std::string& dname, const std::string& content);
         std::string serialize();
+        std::vector <std::string> getData(){return {dname, content};};
     protected:
         std::string dname;
         std::string content;
@@ -31,6 +37,7 @@ class JoinPacket : public PacketTCP {
         std::string id;
 };
 
+
 class AuthPacket : public PacketTCP {
     public:
         AuthPacket(const std::vector<std::string>& arguments);
@@ -43,14 +50,23 @@ class AuthPacket : public PacketTCP {
 
 class ErrorPacket : public PacketTCP {
     public:
-        ErrorPacket(const std::vector<std::string>& arguments);
-        std::string serialize();
+        ErrorPacket(const std::vector<std::string> data);
+        std::vector <std::string> getData();
     protected:
         std::string dname;
         std::string content;
 };
 
+class ReplyPacket : public PacketTCP {
+    public:
+        ReplyPacket(const std::vector<std::string> data);
+        std::vector <std::string> getData();
+    protected:
+        bool success;
+        std::string content;
+};
 
+std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data);
 
 
 #endif // PACKET_TCP_H

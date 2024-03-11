@@ -145,6 +145,10 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data){
 }
 
 
+std::string ByePacket::serialize() {
+    return "BYE" + CRLF;
+}
+
 
 // int main() {
 //     std::string test = "Test string i want to serialize";

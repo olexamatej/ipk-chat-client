@@ -71,6 +71,11 @@ class NullPacket : public PacketTCP {
         std::string serialize(){return "";};
 };
 
+class ByePacket : public PacketTCP {
+    public:
+        std::string serialize();
+};
+
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data);
 
 

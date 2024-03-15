@@ -6,20 +6,36 @@
 #include <condition_variable>
 #include <string>
 #include <vector>
-
+#include <signal.h>
 #include <queue>
 #include <condition_variable>
 
 //TODO
 #define TIMEOUT 50
 
-int main() {
-    std::string ip_address = "127.0.0.1";
-    std::string port = "5553";
-    
-    TCPClient client(ip_address, port);
-    std::cout << "Connected \n";
 
+
+std::string ip_address = "127.0.0.1";
+std::string port = "4567";
+    
+TCPClient client(ip_address, port);
+
+
+void handle_sigint(int sig) {
+    ByePacket byePacket;
+
+    std::string serialized_byePacket = byePacket.serialize();
+
+    client.send(serialized_byePacket);
+
+    exit(0);
+}
+
+int main() {
+  
+    std::cout << "Connected \n";
+    
+    signal(SIGINT, handle_sigint);
     Connection connection = Connection(ip_address, port);
 
     std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
@@ -36,7 +52,7 @@ int main() {
             userInput.getNewInput(line);
 
             std::lock_guard<std::mutex> lock(queue_mutex);
-            input_packet_queue.push(userInput.parseInput());
+            input_packet_queue.push(userInput.parseInput(connection));
             queue_cond_var.notify_one(); 
 
         }
@@ -66,10 +82,11 @@ int main() {
             input_packet_queue.pop();
             lock.unlock();
 
+            
             client.send(serialized_packet);
 
             if(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)){
-                  std::cout << "Waiting\n";
+                std::cout << "Waiting\n";
                 //give this mutex a timeout of 5 seconds
 
                 std::unique_lock<std::mutex> lock(reply_mutex);
@@ -90,8 +107,7 @@ int main() {
             std::cout << reply << std::endl;            
             
             //print message that was sent
-
-
+            
             std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply);
             std::vector<std::string> packet_data;
             if(std::holds_alternative<ReplyPacket>(recv_packet)){
@@ -103,6 +119,7 @@ int main() {
                     std::cout << "Failure\n";
                     if(std::holds_alternative<AuthPacket>(send_packet)){
                         std::cout << "Authentication failed\n";
+                        connection.clearAfterAuth(); 
                     }
                 }
             }
@@ -111,6 +128,8 @@ int main() {
             reply_cond_var.notify_one();
         }
     });
+
+
 
     return 0;
 }

@@ -43,7 +43,7 @@ AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
     if(arguments.size() != 4){
         //TODO throw exception
         std::cout << "Invalid number of arguments" << std::endl;
-        exit(1);
+        return;
     }
     this->id = arguments[1];
     this->dname = arguments[2];

@@ -19,14 +19,13 @@ CommandType getCommandType(std::string line){
 }
 
 
-std::variant<PACKET_TYPE> Input::parseInput(){
+std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
     CommandType type = getCommandType(this->line);
     std::vector<std::string> arguments;
     std::istringstream iss(this->line);
 
-    static std::string display_name = "";
-    static std::string id = "";
-
+    std::string display_name = connection.display_name;
+    std::string id = connection.id;
     for(std::string s; std::getline(iss, s, ' '); ) {
         arguments.push_back(s);
     }
@@ -36,6 +35,7 @@ std::variant<PACKET_TYPE> Input::parseInput(){
     switch(type){
         case CommandType::JOIN:{
             std::cout << "Joining" << std::endl;
+            std::cout << connection.display_name << std::endl;
             JoinPacket joinPacket(arguments, display_name);
             return joinPacket;
         break;
@@ -43,8 +43,9 @@ std::variant<PACKET_TYPE> Input::parseInput(){
         case CommandType::AUTH:{
             std::cout << "Authenticating" << std::endl;
             AuthPacket authPacket(arguments);
-            id = authPacket.getData()[0];
-            display_name = authPacket.getData()[1];
+            connection.id = authPacket.getData()[0];
+            connection.display_name = authPacket.getData()[1];
+            std::cout << "ID: " << connection.id << std::endl;
             return authPacket;
 
         break;

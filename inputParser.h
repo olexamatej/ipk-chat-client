@@ -14,7 +14,7 @@
 class Input{
     public:
         void getNewInput(std::string line);
-        std::variant<PACKET_TYPE> parseInput();
+        std::variant<PACKET_TYPE> parseInput(Connection &connection);
         std::string getLine();
     protected:
         std::string line;

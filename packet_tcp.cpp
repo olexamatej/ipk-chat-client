@@ -203,12 +203,12 @@ ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     uint16_t MessageID = (data[1] << 8) + data[2];
     //displayname until 0 byte
     int i = 3;
-    for(i; data[i] != 0; i++){
+    for(; data[i] != 0; i++){
         this->dname += data[i];
     }
     i++;
 
-    for(i; data[i] != 0; i++){
+    for(; data[i] != 0; i++){
         this->content += data[i];
     }
 

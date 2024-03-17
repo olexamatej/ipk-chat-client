@@ -21,14 +21,14 @@ void UDPClient::create_socket() {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
         exit(1);
     }
-
-    _socket = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+    this->_socket = socket(servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
     if (_socket == -1) {
         perror("socket");
         exit(1);
     }
-  
-    freeaddrinfo(servinfo);
+    
+    //TODO FREE memory at the end
+    // freeaddrinfo(servinfo);
 }
 
 void UDPClient::send(std::string message) {
@@ -39,13 +39,24 @@ void UDPClient::send(std::string message) {
     std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
+std::string UDPClient::receive() {
+    //TODO change buffer size
+    char buffer[1024]; // Declare the buffer variable
+    ssize_t bytes_received = recv(_socket, buffer, sizeof(buffer), 0);
+    if (bytes_received == -1) {
+        perror("recv");
+    }
+    std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;
+    return std::string(buffer, bytes_received);
+}
+
 // int main() {
 
 //     std::string ip_address = "127.0.0.1";
-//     std::string port = "5553";
+//     std::string port = "4567";
     
 //     UDPClient client(ip_address, port);
 //     client.send("Mam rad vlaky\n");
-    
+//     std::cout << client.receive() << std::endl;
 //     return 0;
 // }

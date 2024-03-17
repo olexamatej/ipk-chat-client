@@ -13,6 +13,7 @@ class UDPClient {
     public:
         UDPClient(std::string ip_address, std::string port);
         void send(std::string message);
+        std::string receive();
         void create_socket();
     private:
         int _socket;

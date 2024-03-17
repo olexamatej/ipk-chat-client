@@ -53,7 +53,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         case CommandType::RENAME:
             if(arguments.size() == 2){
                 std::cout << "Renaming" << std::endl;
-                display_name = arguments[1];
+                connection.display_name = arguments[1];
             }
             else{
                 std::cout << "Invalid number of arguments" << std::endl;

@@ -1,4 +1,4 @@
-#include "tcp_client.h"
+#include "udp_client.h"
 #include "inputParser.h"
 #include "packet_tcp.h"
 #include <thread>
@@ -15,30 +15,34 @@
 
 
 
-std::string ip_address = "127.0.0.1";
-std::string port = "4567";
-    
-TCPClient client(ip_address, port);
-
 
 void handle_sigint(int sig) {
     ByePacket byePacket;
 
     std::string serialized_byePacket = byePacket.serialize();
 
-    client.send(serialized_byePacket);
+    // client.send(serialized_byePacket);
 
     exit(0);
 }
 
+
+
+
 int main() {
-  
+    
+    std::string ip_address = "127.0.0.1";
+    std::string port = "4567";
+    UDPClient client(ip_address, port);
+        
     std::cout << "Connected \n";
     
     signal(SIGINT, handle_sigint);
-    Connection connection = Connection(ip_address, port);
+    Connection connection = Connection(ip_address, port, Connection::Protocol::UDP);
 
     std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
+    
+  
 
     std::mutex queue_mutex;
     std::condition_variable queue_cond_var;
@@ -61,7 +65,7 @@ int main() {
     std::condition_variable reply_cond_var;
     std::mutex reply_mutex;
     std::variant<PACKET_TYPE> send_packet = NullPacket();
-
+    
     //thread for sending messages to server
     std::jthread sendThread([&]() {
         //while first thread is running, this thread will be waiting for input
@@ -77,25 +81,23 @@ int main() {
             send_packet = input_packet_queue.front();
 
             std::string serialized_packet = "";
-            std::visit([&](auto& p) { serialized_packet = p.serialize(); }, send_packet);
+            std::visit([&](auto& p) { serialized_packet = p.serialize(connection); }, send_packet);
         
             input_packet_queue.pop();
             lock.unlock();
 
-            
             client.send(serialized_packet);
 
-            if(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)){
-                std::cout << "Waiting\n";
-                //give this mutex a timeout of 5 seconds
+            std::cout << "Waiting\n";
+            //give this mutex a timeout of 5 seconds
 
-                std::unique_lock<std::mutex> lock(reply_mutex);
-                if(reply_cond_var.wait_for(lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
-                    std::cout << "Timeout\n";
-                } else {
-                    std::cout << "Good\n";
-                    std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
-                }   
+            std::unique_lock<std::mutex> lock(reply_mutex);
+            if(reply_cond_var.wait_for(lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
+                std::cout << "Timeout\n";
+            } else {
+                
+                std::cout << "Good\n";
+                std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
             }
         }
     });
@@ -108,27 +110,40 @@ int main() {
             
             //print message that was sent
             
-            std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply);
-            std::vector<std::string> packet_data;
+            std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+
             if(std::holds_alternative<ReplyPacket>(recv_packet)){
-                std::visit([&](auto& p) { packet_data = p.getData(); }, recv_packet);
-                std::cout << packet_data[0] << std::endl;
-                if(packet_data[0] == "1"){
-                    std::cout << "Success\n";
-                } else {
-                    std::cout << "Failure\n";
-                    if(std::holds_alternative<AuthPacket>(send_packet)){
-                        std::cout << "Authentication failed\n";
-                        connection.clearAfterAuth(); 
-                    }
+                ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+                reply = client.receive();
+                std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+                if(std::holds_alternative<ConfirmPacket>(recv_packet)){
+                    ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+                    std::vector<std::string> packet_data = confirm_packet.getData();
+                    std::cout << packet_data[0] << std::endl;
+                    std::cout << "posielam confirm\n";
+                    client.send(reply);
+                }          
+            }
+            else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
+                ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+                std::string prev_reply = reply;
+                reply = client.receive();
+                std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+                if(std::holds_alternative<ReplyPacket>(recv_packet)){
+                    ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+                    std::vector<std::string> packet_data = reply_packet.getData();
+                    std::cout << packet_data[0] << std::endl;
+                    std::cout << "posielam confirm\n";
+                    client.send(prev_reply);
                 }
             }
+            std::vector<std::string> packet_data;
+            
             
             std::unique_lock<std::mutex> lock(reply_mutex);
             reply_cond_var.notify_one();
         }
     });
-
 
 
     return 0;

@@ -1,7 +1,7 @@
 /*
- * IPK.2023L
+ * IPK.2024
  *
- * Demonstration of trivial TCP client.
+ * Demonstration of trivial UDP client.
  *
  */
 
@@ -54,19 +54,18 @@ typedef enum
 Status GetConfigFromCLArguments(int argc, const char *argv[], Config *config);
 Status GetAddrForDomain(Config *config, struct addrinfo **server_info);
 
-// Sending buffer size
-#define SEND_BUFSIZE 1024
+// Message size
+// MAX_MESSAGE_SIZE > 1472 generally undergoes IP fragmentation (the value depends on MTU of the path)
+// MAX_MESSAGE_SIZE > 65,507 is unsendable on IPv4, sets errno to "Message too long" (limit of IPv4 header)
+// MAX_MESSAGE_SIZE > 65,535 is unsendable on IPv6, sets errno to "Message too long" (limit of UDP header)
+#define MAX_MESSAGE_SIZE 1024
 
-// Receive buffer size (<= 1) - does not really matter with TCP
-#define RECEIVE_BUFSIZE 4
-
-// Terminate connection character
 #define TERMINATE_CHAR '!'
 
 int main(int argc, const char *argv[])
 {
 
-  char send_buffer[SEND_BUFSIZE] = {0};
+  char message_buffer[MAX_MESSAGE_SIZE] = {0};
   Config config;
 
   // Check and parse arguments
@@ -87,80 +86,70 @@ int main(int argc, const char *argv[])
       .tv_sec = 2};
   CHECK_PERROR(setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, &timeval, sizeof(timeval)) < 0, "Setsockopt", server_info);
 
-  // Connect to the remote server
-  CHECK_PERROR(connect(client_socket, server_info->ai_addr, server_info->ai_addrlen) < 0, "Connect", server_info);
-
   // Get messages from stdin and send them to the server
-  printf("INFO: Connected to the server!\n");
   printf("Type your messages, terminate with '%c' or Control+D\n", TERMINATE_CHAR);
 
   bool terminate_char_found = false;
   while (!terminate_char_found)
   {
     // Read bufsize or a single line
-    if (fgets(send_buffer, SEND_BUFSIZE, stdin) == NULL) // fgets reads at most BUFSIZE - 1
+    if (fgets(message_buffer, MAX_MESSAGE_SIZE, stdin) == NULL) // fgets reads at most BUFSIZE - 1
     {
-      send_buffer[0] = TERMINATE_CHAR; // In case of EOF, just insert TERMINATE_CHAR
+      message_buffer[0] = TERMINATE_CHAR; // In case of EOF, just insert TERMINATE_CHAR
     }
 
     // Check terminating character
-    char *terminate_character = strchr(send_buffer, TERMINATE_CHAR);
+    char *terminate_character = strchr(message_buffer, TERMINATE_CHAR);
     if (terminate_character != NULL)
     {
       *terminate_character = '\0';
       terminate_char_found = true;
     }
 
-    // Send message
-    int total_bytes_sent = 0;
-    int total_bytes_to_send = terminate_char_found ? strlen(send_buffer) + 1 : strlen(send_buffer);
+    // Whether to include \0 or not;
+    int message_length = terminate_char_found ? strlen(message_buffer) + 1 : strlen(message_buffer);
 
-    while (total_bytes_sent != total_bytes_to_send)
-    {
-
-      // Include \0 if user terminated input
-      int size_to_send = terminate_char_found ? strlen(send_buffer + total_bytes_sent) + 1 : strlen(send_buffer + total_bytes_sent);
-      int bytes_sent = send(client_socket, send_buffer + total_bytes_sent, size_to_send, 0);
-      if (bytes_sent <= 0)
-      {
-        fprintf(stderr, "No data has been sent to the server!\n");
-      } 
-      CHECK_PERROR(bytes_sent < 0, "Send failed!", server_info);
-      total_bytes_sent += bytes_sent;
-    }
+    // The message gets send as a whole or not at all
+    int bytes_sent = sendto(client_socket, message_buffer, message_length, 0, server_info->ai_addr, server_info->ai_addrlen);
+    CHECK_PERROR(bytes_sent < 0, "Sendto", server_info);
   }
 
   // Receive message back from the server, message is terminated with \0
-  char receive_buffer[RECEIVE_BUFSIZE] = {0};
+  memset(message_buffer, 0, MAX_MESSAGE_SIZE);
+
+  // Free addrInfo - no longer needed
+  freeaddrinfo(server_info);
+
+  // Receive message back from the server
+  struct sockaddr_storage server_addr;
+  socklen_t server_len = sizeof(server_addr);
 
   terminate_char_found = false;
   while (!terminate_char_found)
   {
-    int received_bytes = recv(client_socket, receive_buffer, RECEIVE_BUFSIZE, 0);
+    int received_bytes = recvfrom(client_socket, message_buffer, MAX_MESSAGE_SIZE, 0, (struct sockaddr *)&server_addr, &server_len);
     if (received_bytes <= 0)
     {
-      fprintf(stderr, "No data received from the server!\n");
+      fprintf(stderr, "Server timeout!\n");
       break;
     }
 
     // Print message, check if \0 was present in the message
     for (int i = 0; i < received_bytes; i++)
     {
-      printf("%c", receive_buffer[i]);
-      if (receive_buffer[i] == '\0')
+      printf("%c", message_buffer[i]);
+      if (message_buffer[i] == '\0')
       {
         terminate_char_found = true;
         break;
       }
     }
   }
+
   printf("Terminating ...\n");
 
   // Close the socket
   close(client_socket);
-
-  // Free addrInfo
-  freeaddrinfo(server_info);
 
   return EXIT_SUCCESS;
 }
@@ -192,9 +181,9 @@ Status GetAddrForDomain(Config *config, struct addrinfo **server_info)
 {
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
-  hints.ai_family = AF_INET;       // IPv4
-  hints.ai_socktype = SOCK_STREAM; // TCP
-  hints.ai_protocol = 0;           // Protocol
+  hints.ai_family = AF_INET;      // IPv4
+  hints.ai_socktype = SOCK_DGRAM; // UDP
+  hints.ai_protocol = 0;          // Protocol
 
   int status = getaddrinfo(config->server_hostname, config->port_string, &hints, server_info);
 

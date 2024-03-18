@@ -45,7 +45,6 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
             AuthPacket authPacket(arguments);
             connection.id = authPacket.getData()[0];
             connection.display_name = authPacket.getData()[1];
-            std::cout << "ID: " << connection.id << std::endl;
             return authPacket;
 
         break;
@@ -63,7 +62,6 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         case CommandType::HELP:
         break;
         default:{
-            std::cout << "Sending message" << std::endl;
             MsgPacket msgPacket(display_name, this->line);
             return msgPacket;
         }

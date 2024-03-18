@@ -64,47 +64,66 @@ void Runner::packetSender(Connection &connection) {
         }
     }
 
-void Runner::packetReceiver(Connection &connection) {
-    while(1) {
-            std::string reply = client.receive();
-            std::cout << "Received: ";
-            std::cout << reply << std::endl;            
-            
-            //print message that was sent
-            
-            std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
 
-            if(std::holds_alternative<ReplyPacket>(recv_packet)){
-                ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-                reply = client.receive();
-                std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
-                if(std::holds_alternative<ConfirmPacket>(recv_packet)){
-                    ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-                    std::vector<std::string> packet_data = confirm_packet.getData();
-                    std::cout << packet_data[0] << std::endl;
-                    std::cout << "posielam confirm\n";
-                    client.send(reply);
-                }          
-            }
-            else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
-                ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-                std::string prev_reply = reply;
-                reply = client.receive();
-                std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
-                if(std::holds_alternative<ReplyPacket>(recv_packet)){
-                    ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-                    std::vector<std::string> packet_data = reply_packet.getData();
-                    std::cout << packet_data[0] << std::endl;
-                    std::cout << "posielam confirm\n";
-                    client.send(prev_reply);
-                }
-            }
-            std::vector<std::string> packet_data;
-            
-            std::unique_lock<std::mutex> lock(reply_mutex);
-            reply_cond_var.notify_one();
+void Runner::packetReceiver(Connection &connection) {
+    while (1) {
+        std::string reply = client.receive();
+
+        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+        
+        if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
+            processAuthJoin(connection, reply, recv_packet);
         }
+        else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
+            std::cout << "prisiel confirm\n";
+        }
+        else{
+            //call the .getData() method of the packet and print the data
+            std::cout << "Message received: \n";
+            std::visit([&](auto& p) { std::cout << "Message received: " << p.getData()[1] << std::endl; }, recv_packet);
+            uint16_t messageID = 0;
+            ConfirmPacket confirm_packet(messageID);
+            client.send(confirm_packet.serialize());
+        }
+        
+        std::unique_lock<std::mutex> lock(reply_mutex);
+        reply_cond_var.notify_one();
+    }
 }
+
+void Runner::processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
+
+    if (std::holds_alternative<ReplyPacket>(recv_packet)) {
+        ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+        reply = client.receive();
+        // write reply.getData()[1]
+
+        std::visit([&](auto& p) { std::cout << p.getData()[1] << std::endl; }, recv_packet);
+
+        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+        
+        if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
+            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+            std::vector<std::string> packet_data = confirm_packet.getData();
+            client.send(reply);
+        }
+    }
+
+    else if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
+        ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+        std::string prev_reply = reply;
+        reply = client.receive();
+        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+        
+        if (std::holds_alternative<ReplyPacket>(recv_packet)) {
+            ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+            std::vector<std::string> packet_data = reply_packet.getData();
+            std::cout << packet_data[1] << std::endl;
+            client.send(prev_reply);
+        }
+    }
+}
+
 
 void Runner::run(){
     Connection connection = Connection(ip_address, port, Connection::Protocol::UDP);
@@ -118,8 +137,6 @@ void Runner::run(){
         inputScanner(connection);
     });
 
-    
-    
     //thread for sending messages to server
     std::jthread sendThread([&]() {
         //while first thread is running, this thread will be waiting for input

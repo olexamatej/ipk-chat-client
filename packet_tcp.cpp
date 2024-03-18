@@ -16,7 +16,26 @@ MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
 }
 
 MsgPacket::MsgPacket(const std::vector<uint8_t> data){
+    this->messageID = (data[1] << 8) + data[2];
+    //displayname until 0 byte
+    int i = 3;
+    for(; data[i] != 0; i++){
+        this->dname += data[i];
+    }
+    i++;
 
+    for(; data[i] != 0; i++){
+        this->content += data[i];
+    }
+
+}
+
+std::vector<std::string> MsgPacket::getData() {
+    std::vector<std::string> data;
+    data.push_back(dname);
+    data.push_back(content);
+    data.push_back(std::to_string(messageID));
+    return data;
 }
 
 std::string MsgPacket::serialize(Connection &connection) {
@@ -32,8 +51,8 @@ std::string MsgPacket::serialize(Connection &connection) {
         packet.push_back(0x04);
 
         // Add MessageID
-        packet.push_back(id_num >> 8);  // High byte
         packet.push_back(id_num & 0xFF);  // Low byte
+        packet.push_back(id_num >> 8);  // High byte
 
         // Add DisplayName
         for (char c : this->dname) {
@@ -92,8 +111,8 @@ std::string JoinPacket::serialize(Connection &connection) {
         packet.push_back(0x03);
 
         // Add MessageID
-        packet.push_back(id_num >> 8);  // High byte
         packet.push_back(id_num & 0xFF);  // Low byte
+        packet.push_back(id_num >> 8);  // High byte
 
         // Add Username
         for (char c : connection.id) {
@@ -152,8 +171,8 @@ std::string AuthPacket::serialize(Connection &connection) {
         packet.push_back(0x02);
 
         // Add MessageID
-        packet.push_back(id_num >> 8);  // High byte
         packet.push_back(id_num & 0xFF);  // Low byte
+        packet.push_back(id_num >> 8);  // High byte
 
         // Add Username
         for (char c : id) {
@@ -200,7 +219,7 @@ ErrorPacket::ErrorPacket(const std::vector<std::string> data) {
 
 }
 ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
-    uint16_t MessageID = (data[1] << 8) + data[2];
+    this->messageID = (data[1] << 8) + data[2];
     //displayname until 0 byte
     int i = 3;
     for(; data[i] != 0; i++){
@@ -211,12 +230,10 @@ ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     for(; data[i] != 0; i++){
         this->content += data[i];
     }
-
-
 }
 
 ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
-    uint16_t MessageID = (data[1] << 8) + data[2];
+    this->messageID = (data[1] << 8) + data[2];
     this->success = data[3];
     uint16_t Ref_messageID = (data[4] << 8) + data[5];
     this->content = std::string(data.begin() + 6, data.end());
@@ -230,6 +247,20 @@ ConfirmPacket::ConfirmPacket(const std::vector<uint8_t> data){
         exit(1);
     }
     this->refID = std::to_string((data[1] << 8) + data[2]);
+}
+
+ConfirmPacket::ConfirmPacket(uint16_t messageID){
+    this->refID = std::to_string(messageID);
+}
+
+std::string ConfirmPacket::serialize() {
+    std::vector <uint8_t> packet;
+    packet.push_back(0x00);
+    uint16_t id_num = std::stoi(refID);
+    packet.push_back(id_num & 0xFF);  // Low byte
+    packet.push_back(id_num >> 8);  // High byte
+    std::string packet_str(packet.begin(), packet.end());
+    return packet_str;    
 }
 
 std::vector<std::string> ConfirmPacket::getData() {
@@ -320,13 +351,11 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
         uint8_t first_byte = data_bytes[0];
         switch(first_byte){
             case 0x00:{
-                std::cout << "PRISIEL CONFIRM PACKET" << std::endl;
                 ConfirmPacket confirm_packet(data_bytes);
                 return confirm_packet;
                 break;
                 }
             case 0x01:{
-                std::cout << "PRISIEL REPLY PACKET" << std::endl;
                 ReplyPacket reply_packet(data_bytes);
                 return reply_packet;
                 break;

@@ -13,13 +13,6 @@
 #include "runner.h"
 //TODO
 
-
-
-
-
-
-
-
 int main() {
     
     Runner("127.0.0.1", "4567", Connection::Protocol::UDP).run();

@@ -24,10 +24,11 @@ class MsgPacket : public PacketTCP {
         MsgPacket(const std::string& dname, const std::string& content);
         MsgPacket(const std::vector<uint8_t> data);
         std::string serialize(Connection &connection);
-        std::vector <std::string> getData(){return {dname, content};};
+        std::vector <std::string> getData();
     protected:
         std::string dname;
         std::string content;
+        uint16_t messageID;
 };
 
 class JoinPacket : public PacketTCP {
@@ -58,6 +59,7 @@ class ErrorPacket : public PacketTCP {
     protected:
         std::string dname;
         std::string content;
+        uint16_t messageID;
 };
 
 class ReplyPacket : public PacketTCP {
@@ -68,19 +70,22 @@ class ReplyPacket : public PacketTCP {
     protected:
         bool success;
         std::string content;
+        uint16_t messageID;
 };
 
 class ConfirmPacket : public PacketTCP {
     public:
         ConfirmPacket(const std::vector<uint8_t> data);
+        ConfirmPacket(uint16_t messageID);
         std::vector <std::string> getData();
+        std::string serialize();
     protected:
         std::string refID;
 };
 
 class NullPacket : public PacketTCP {
     public:
-        std::string serialize(const Connection connection){return "";};
+        std::string serialize(Connection &connection){return "";};
 };
 
 class ByePacket : public PacketTCP {

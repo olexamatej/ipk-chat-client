@@ -20,50 +20,32 @@ void handle_sigint(int sig) {
 // }
 
 
-void Runner::run(){
+void Runner::inputScanner(Connection &connection){
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        Input userInput;
+        userInput.getNewInput(line);
+        std::lock_guard<std::mutex> lock(queue_mutex);
+        input_packet_queue.push(userInput.parseInput(connection));
+        queue_cond_var.notify_one(); 
+    }
 
-        
-    std::cout << "Connected \n";
-    
-    // signal(SIGINT, handle_sigint);
-    Connection connection = Connection(ip_address, port, Connection::Protocol::UDP);
+}
 
-
-
-     //thread for reading stdin, parsing them and sending them to other thread
-     std::jthread inputThread([&](){
-        std::string line;
-        while (std::getline(std::cin, line)) {
-
-            Input userInput;
-            userInput.getNewInput(line);
-
-            std::lock_guard<std::mutex> lock(queue_mutex);
-            input_packet_queue.push(userInput.parseInput(connection));
-            queue_cond_var.notify_one(); 
-
-        }
-    });
-
-    
-    
-    //thread for sending messages to server
-    std::jthread sendThread([&]() {
-        //while first thread is running, this thread will be waiting for input
-        while (true) {
+void Runner::packetSender(Connection &connection) {
+        while(1) {
             std::unique_lock<std::mutex> lock(queue_mutex);
-
             queue_cond_var.wait(lock, [&] { return !input_packet_queue.empty(); });
             if(input_packet_queue.empty()){
                 continue;
             }
-            
+
             //get the first packet from the queue and call .serialize
             send_packet = input_packet_queue.front();
 
             std::string serialized_packet = "";
             std::visit([&](auto& p) { serialized_packet = p.serialize(connection); }, send_packet);
-        
+
             input_packet_queue.pop();
             lock.unlock();
 
@@ -76,15 +58,14 @@ void Runner::run(){
             if(reply_cond_var.wait_for(reply_lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
                 std::cout << "Timeout\n";
             } else {
-                
                 std::cout << "Good\n";
                 std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
             }
         }
-    });
-    
-    std::jthread receiveThread([&]() {
-        while(1) {
+    }
+
+void Runner::packetReceiver(Connection &connection) {
+    while(1) {
             std::string reply = client.receive();
             std::cout << "Received: ";
             std::cout << reply << std::endl;            
@@ -123,5 +104,29 @@ void Runner::run(){
             std::unique_lock<std::mutex> lock(reply_mutex);
             reply_cond_var.notify_one();
         }
+}
+
+void Runner::run(){
+    Connection connection = Connection(ip_address, port, Connection::Protocol::UDP);
+
+    std::cout << "Connected \n";
+    
+    // signal(SIGINT, handle_sigint);
+
+     //thread for reading stdin, parsing them and sending them to other thread
+     std::jthread inputThread([&](){
+        inputScanner(connection);
+    });
+
+    
+    
+    //thread for sending messages to server
+    std::jthread sendThread([&]() {
+        //while first thread is running, this thread will be waiting for input
+        packetSender(connection);
+    });
+    
+    std::jthread receiveThread([&]() {
+        packetReceiver(connection);
     });
 }

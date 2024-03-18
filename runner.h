@@ -16,7 +16,9 @@ class Runner {
         : ip_address(ip_address), port(port), protocol(protocol), client(ip_address, port) {
         }
         void run();
-        void handle_sigint(int sig);
+        void inputScanner(Connection &connection);
+        void packetSender(Connection &connection);
+        void packetReceiver(Connection &connection);
         std::mutex queue_mutex;
         std::condition_variable queue_cond_var;
         std::condition_variable reply_cond_var;

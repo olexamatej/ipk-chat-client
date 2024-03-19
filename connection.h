@@ -2,8 +2,8 @@
 #define CONNECTION_H
 #include <string>
 #include <iostream>
-
-
+#include <set>
+#include <map>
 
 class Connection {
     public:
@@ -12,7 +12,7 @@ class Connection {
             TCP,
             UDP
         };
-
+        std::map<uint16_t, bool> message_id_map;
         std::string ip_address;        
         std::string port;
         std::string display_name;

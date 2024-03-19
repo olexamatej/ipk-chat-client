@@ -1,5 +1,5 @@
 #include "inputParser.h"
-#include "packet_tcp.h"
+#include "packet.h"
 
 
 CommandType getCommandType(std::string line){
@@ -36,6 +36,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         case CommandType::JOIN:{
             std::cout << "Joining" << std::endl;
             std::cout << connection.display_name << std::endl;
+            //print all arguments
             JoinPacket joinPacket(arguments, display_name);
             return joinPacket;
         break;

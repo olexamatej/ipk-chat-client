@@ -59,7 +59,9 @@
         "ranges": "cpp",
         "semaphore": "cpp",
         "queue": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "map": "cpp",
+        "set": "cpp"
     },
     "cSpell.words": [
         "servinfo"

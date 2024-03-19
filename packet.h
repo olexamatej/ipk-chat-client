@@ -1,5 +1,5 @@
-#ifndef PACKET_TCP_H
-#define PACKET_TCP_H
+#ifndef packet_H
+#define packet_H
 
 #include <iostream>
 #include <string>
@@ -96,4 +96,4 @@ class ByePacket : public PacketTCP {
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection &connection);
 
 
-#endif // PACKET_TCP_H
+#endif // packet_H

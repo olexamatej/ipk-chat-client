@@ -1,6 +1,6 @@
 #include "tcp_client.h"
 #include "inputParser.h"
-#include "packet_tcp.h"
+#include "packet.h"
 #include <thread>
 #include <mutex>
 #include <condition_variable>

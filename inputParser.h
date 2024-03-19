@@ -1,6 +1,6 @@
 #ifndef INPUTPARSER_H
 #define INPUTPARSER_H
-#include "packet_tcp.h"
+#include "packet.h"
 #include <iostream>
 #include <vector>
 #include <string>

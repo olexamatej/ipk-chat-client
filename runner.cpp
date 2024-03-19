@@ -27,6 +27,9 @@ void Runner::inputScanner(Connection &connection){
         userInput.getNewInput(line);
         std::lock_guard<std::mutex> lock(queue_mutex);
         input_packet_queue.push(userInput.parseInput(connection));
+
+        connection.message_id_map[connection.message_id-1] = false;
+
         queue_cond_var.notify_one(); 
     }
 
@@ -48,7 +51,7 @@ void Runner::packetSender(Connection &connection) {
 
             input_packet_queue.pop();
             lock.unlock();
-
+            
             client.send(serialized_packet);
 
             std::cout << "Waiting\n";
@@ -75,13 +78,23 @@ void Runner::packetReceiver(Connection &connection) {
             processAuthJoin(connection, reply, recv_packet);
         }
         else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
-            std::cout << "prisiel confirm\n";
+            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+            std::vector<std::string> packet_data = confirm_packet.getData();
+            uint16_t messageID = std::stoi(packet_data[0]);
+            if(connection.message_id_map[messageID] == false){
+                connection.message_id_map[messageID] = true;
+            }         
+            else{
+                std::cout << "incorrect id";
+                continue;
+            }   
         }
         else{
             //call the .getData() method of the packet and print the data
             std::cout << "Message received: \n";
-            std::visit([&](auto& p) { std::cout << "Message received: " << p.getData()[1] << std::endl; }, recv_packet);
-            uint16_t messageID = 0;
+            std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
+            std::cout << packet_data[1] << std::endl;
+            uint16_t messageID = std::stoi(packet_data[2]);
             ConfirmPacket confirm_packet(messageID);
             client.send(confirm_packet.serialize());
         }
@@ -118,7 +131,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
         if (std::holds_alternative<ReplyPacket>(recv_packet)) {
             ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
             std::vector<std::string> packet_data = reply_packet.getData();
-            std::cout << packet_data[1] << std::endl;
+            std::cout << "REPLY PACKET DATA - " << packet_data[2] << std::endl;
             client.send(prev_reply);
         }
     }

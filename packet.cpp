@@ -1,4 +1,4 @@
-#include "packet_tcp.h"
+#include "packet.h"
 
 const std::string SP = " ";
 const std::string IS = " IS ";
@@ -105,7 +105,6 @@ std::string JoinPacket::serialize(Connection &connection) {
 
     else if(connection.protocol == Connection::Protocol::UDP){
         std::vector<uint8_t> packet;
-
         uint16_t id_num = connection.message_id++;
 
         packet.push_back(0x03);
@@ -114,8 +113,7 @@ std::string JoinPacket::serialize(Connection &connection) {
         packet.push_back(id_num & 0xFF);  // Low byte
         packet.push_back(id_num >> 8);  // High byte
 
-        // Add Username
-        for (char c : connection.id) {
+        for (char c : this->id) {
             packet.push_back(c);
         }
 
@@ -241,11 +239,7 @@ ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
 }
 
 ConfirmPacket::ConfirmPacket(const std::vector<uint8_t> data){
-    if(data.size() != 3){
-        //TODO throw exception
-        std::cout << "Invalid number of arguments" << std::endl;
-        exit(1);
-    }
+    
     this->refID = std::to_string((data[1] << 8) + data[2]);
 }
 
@@ -266,6 +260,7 @@ std::string ConfirmPacket::serialize() {
 std::vector<std::string> ConfirmPacket::getData() {
     std::vector<std::string> data;
     data.push_back(refID);
+    
     return data;
 }
 
@@ -304,6 +299,8 @@ std::vector<std::string>ReplyPacket::getData() {
     std::vector<std::string> data;
     data.push_back(std::to_string(success));
     data.push_back(content);
+    data.push_back(std::to_string(messageID));
+
     return data;
 }
 
@@ -312,6 +309,7 @@ std::vector<std::string> ErrorPacket::getData() {
     std::vector<std::string> data;
     data.push_back(dname);
     data.push_back(content);
+    data.push_back(std::to_string(messageID));
     return data;
 }
 

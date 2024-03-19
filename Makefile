@@ -5,7 +5,7 @@ LDFLAGS=-pthread
 CFLAGS := -Wall -Wextra -std=c++20 -g
 
 # Source files
-SRCS := inputParser.cpp tcp_client.cpp main.cpp udp_client.cpp packet.cpp connection.cpp runner.cpp
+SRCS := inputParser.cpp tcp_client.cpp main.cpp udp_client.cpp packet.cpp connection.cpp runner.cpp argumentParser.cpp
 
 # Object files
 OBJS := $(SRCS:.cpp=.o)

@@ -31,7 +31,10 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
     }
 
     // std::cout << "input is " << this->line << std::endl;
-
+    if((display_name == "" || id == "") && type != CommandType::AUTH){
+        std::cout << "Please authenticate first" << std::endl;
+        return NullPacket();
+    }
     switch(type){
         case CommandType::JOIN:{
             std::cout << "Joining" << std::endl;

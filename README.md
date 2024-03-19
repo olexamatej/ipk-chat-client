@@ -1,14 +1,9 @@
 #TODO
 
-ARG parser
-
-Error handle pri authe 
-
 Warningy - ak nespravne argumenty dakto zada tak vrat nullpacket a ptm to len kontroluj
 Add size control of messages 
 
 Add timeouts and tries
-
 
 Add incorrect message handling (dont send packet if message is invalid)
 

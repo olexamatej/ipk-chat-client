@@ -124,49 +124,43 @@ void Runner::packetReceiver(Connection &connection) {
 }
 
 void Runner::processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
-    if (std::holds_alternative<ReplyPacket>(recv_packet)) {
-        handleReplyPacket(connection, reply, recv_packet);
-    }
-    else if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
-        handleConfirmPacket(connection, reply, recv_packet);
-    }
-}
+    bool confirmed = false;
+    bool replied = false;
+    while(!confirmed || !replied) {
+        if (std::holds_alternative<ReplyPacket>(recv_packet)) {
+           ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+            std::vector<std::string> packet_data = reply_packet.getData();
 
-void Runner::handleReplyPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
-    ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-    reply = client.receive();
-    std::vector<std::string> packet_data = reply_packet.getData();
+            if (packet_data[0] != "1") {
+                connection.clearAfterAuth();
+                return; // No further processing needed if authentication failed
+            }
+            std::cout << "Message: " << packet_data[1] << std::endl;    
+            ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
+            client.send(confirm_packet.serialize());
+            replied = true;
 
-    if (packet_data[0] != "1") {
-        connection.clearAfterAuth();
-        return; // No further processing needed if authentication failed
-    }
-    std::cout << "Message: " << packet_data[1] << std::endl;    
-
-    std::variant<RECV_PACKET_TYPE> next_recv_packet = ReceiveParser(reply, connection);
-    if (std::holds_alternative<ConfirmPacket>(next_recv_packet)) {
-        ConfirmPacket confirm_packet = std::get<ConfirmPacket>(next_recv_packet);
-        client.send(reply);
-    }
-}
-
-void Runner::handleConfirmPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
-    ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-    std::string prev_reply = reply;
-    reply = client.receive();
-    
-    std::variant<RECV_PACKET_TYPE> next_recv_packet = ReceiveParser(reply, connection);
-    if (std::holds_alternative<ReplyPacket>(next_recv_packet)) {
-        ReplyPacket reply_packet = std::get<ReplyPacket>(next_recv_packet);
-        std::vector<std::string> packet_data = reply_packet.getData();
-        if (packet_data[0] != "1") {
-            connection.clearAfterAuth();
-            return; // No need to proceed if authentication failed
         }
-        std::cout << "Message: " << packet_data[1] << std::endl;    
+        if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
+            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+            std::vector<std::string> packet_data = confirm_packet.getData();
+            uint16_t messageID = std::stoi(packet_data[0]);
+            if(connection.message_id_map[messageID] == false){
+                connection.message_id_map[messageID] = true;
+                confirmed = true;
+            }         
+            else{
+                continue;
+            } 
+        }
+        if(confirmed && replied){
+            break;
+        }
+        reply = client.receive();
+        recv_packet = ReceiveParser(reply, connection);
 
-        client.send(prev_reply);
     }
+    std::cout << "\nAuthentication successful" << std::endl;
 }
 
 

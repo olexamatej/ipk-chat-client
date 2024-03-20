@@ -37,16 +37,28 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
     }
     switch(type){
         case CommandType::JOIN:{
-            std::cout << "Joining" << std::endl;
             std::cout << connection.display_name << std::endl;
             //print all arguments
+            if(arguments.size() != 2){
+                std::cout << "Invalid number of arguments" << std::endl;
+                return NullPacket();
+            }
             JoinPacket joinPacket(arguments, display_name);
+            if(!joinPacket.LegalCheck()){
+                return NullPacket();
+            }
+
             return joinPacket;
         break;
         }
         case CommandType::AUTH:{
-            std::cout << "Authenticating" << std::endl;
+            if(arguments.size() != 4){
+                return NullPacket();
+            }
             AuthPacket authPacket(arguments);
+            if(!authPacket.LegalCheck()){
+                return NullPacket();
+            }
             connection.id = authPacket.getData()[0];
             connection.display_name = authPacket.getData()[1];
             return authPacket;
@@ -65,8 +77,11 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         break;
         case CommandType::HELP:
         break;
-        default:{
+        default:{            
             MsgPacket msgPacket(display_name, this->line);
+            if(!msgPacket.LegalCheck()){
+                return NullPacket();
+            }
             return msgPacket;
         }
         break;

@@ -12,8 +12,16 @@ MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
         exit(1);
     }
     this->dname = dname;
-    this->content = content;
 }
+
+bool MsgPacket::LegalCheck(){
+    if(content.length() > 1400){
+        std::cout << "Content is too long" << std::endl;
+        return false;
+    }
+    return true;
+}
+
 
 MsgPacket::MsgPacket(const std::vector<uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
@@ -82,15 +90,21 @@ std::string MsgPacket::serialize(Connection &connection) {
 
 
 JoinPacket::JoinPacket(const std::vector<std::string>& arguments, const std::string& dname) {
-    if(arguments.size() != 2){
-        //TODO throw exception
-        std::cout << "Invalid number of arguments" << std::endl;
-        exit(1);
-    }
     this->id = arguments[1];
     this->dname = dname;
 }
 
+bool JoinPacket::LegalCheck(){
+    if(this->dname.length() > 20){
+        std::cout << "Display name is too long" << std::endl;
+        return false;
+    }
+    if(this->id.length() > 20){
+        std::cout << "ID is too long" << std::endl;
+        return false;
+    }
+    return true;
+}
 
 std::string JoinPacket::serialize(Connection &connection) {
     if(this->dname == ""){
@@ -137,15 +151,74 @@ std::string JoinPacket::serialize(Connection &connection) {
     exit(1);
 }
 
-AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
-    if(arguments.size() != 4){
-        //TODO throw exception
-        std::cout << "Invalid number of arguments" << std::endl;
-        return;
+bool AuthPacket::LegalCheck(){
+    if(this->dname.length() > 20){
+        std::cout << "Display name is too long" << std::endl;
+        return false;
     }
+    for(char c : this->dname){
+        if(!isalnum(c) && c != '-'){
+            std::cout << "ID has invalid characters" << std::endl;
+            return false;
+        }
+    }
+    if(this->id.length() > 20){
+        std::cout << "ID is too long" << std::endl;
+        return false;
+    }
+    for(char c : this->id){
+        if(!isalnum(c) && c != '-'){
+            std::cout << "ID has invalid characters" << std::endl;
+            return false;
+        }
+    }
+    if(this->secret.length() > 128){
+        std::cout << "Secret is too long" << std::endl;
+        return false;
+    }
+    for(char c : this->secret){
+        if(!isalnum(c) && c != '-'){
+            std::cout << "ID has invalid characters" << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
+    
+    
     this->id = arguments[1];
+    //if this->id is longer than 20 characters
     this->dname = arguments[2];
+
+    if(this->dname.length() > 20){
+        //TODO throw exception
+        std::cout << "Display name is too long" << std::endl;
+        exit(1);
+    }
+    for(char c : this->dname){
+        if(!isalnum(c) && c != '_'){
+            std::cout << "ID has invalid characters" << std::endl;
+            exit(1);
+        }
+    }
+
     this->secret = arguments[3];
+
+    if(this->secret.length() > 128){
+        std::cout << "Display name is too long" << std::endl;
+        exit(1);
+    }
+
+    for(char c : this->secret){
+        if(!isalnum(c) && c != '-'){
+            std::cout << "ID has invalid characters" << std::endl;
+            exit(1);
+        }
+    }
+
 }
 
 std::vector<std::string> AuthPacket::getData() {
@@ -239,10 +312,10 @@ ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
 }
 
 ConfirmPacket::ConfirmPacket(const std::vector<uint8_t> data){
-    
     this->refID = std::to_string((data[1] << 8) + data[2]);
 }
 
+//TODO check this, if the serialize is not the same as in the example
 ConfirmPacket::ConfirmPacket(uint16_t messageID){
     this->refID = std::to_string(messageID);
 }

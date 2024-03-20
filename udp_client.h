@@ -8,10 +8,10 @@
 #include <netdb.h>
 #include <unistd.h>
 
-
 class UDPClient {
     public:
-        UDPClient(std::string ip_address, std::string port);
+        UDPClient();
+        UDPClient(const std::string ip_address,const std::string port);
         void send(std::string message);
         std::string receive();
         void create_socket();

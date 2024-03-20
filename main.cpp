@@ -9,13 +9,12 @@
 #include <queue>
 #include <condition_variable>
 
-
+#include "argumentParser.h"
 #include "runner.h"
-//TODO
 
-int main() {
-    
-    Runner("127.0.0.1", "4567", Connection::Protocol::UDP).run();
+int main(int argc, char *argv[]) {
+    ArgumentParser argParser(argc, argv);
+    Runner(argParser).run();
 
 
     return 0;

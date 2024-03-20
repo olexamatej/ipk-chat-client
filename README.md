@@ -1,12 +1,5 @@
 #TODO
 
-Warningy - ak nespravne argumenty dakto zada tak vrat nullpacket a ptm to len kontroluj
-Add size control of messages 
-
-Add timeouts and tries
-
-Add incorrect message handling (dont send packet if message is invalid)
-
 Proper received message writeup
 
 Check if multiple clients on server work - Fix message receiving 

@@ -25,6 +25,7 @@ class MsgPacket : public PacketTCP {
         MsgPacket(const std::vector<uint8_t> data);
         std::string serialize(Connection &connection);
         std::vector <std::string> getData();
+        bool LegalCheck();
     protected:
         std::string dname;
         std::string content;
@@ -35,6 +36,7 @@ class JoinPacket : public PacketTCP {
     public:
         JoinPacket(const std::vector<std::string>& arguments, const std::string& dname);
         std::string serialize(Connection &connection);
+        bool LegalCheck();
     protected:
         std::string dname;
         std::string id;
@@ -49,6 +51,7 @@ class AuthPacket : public PacketTCP {
         std::string id;
         std::string dname;
         std::string secret;
+        bool LegalCheck();
 };
 
 class ErrorPacket : public PacketTCP {

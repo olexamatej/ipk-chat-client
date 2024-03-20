@@ -40,7 +40,6 @@ void ArgumentParser::parse(){
                 exit(0);
             break; 
             default:
-                printf("Invalid option\n");
                 break;
         }
     }

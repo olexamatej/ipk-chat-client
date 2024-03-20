@@ -2,6 +2,22 @@
 #define TIMEOUT 50
 #include <signal.h>
 
+
+Runner::Runner(ArgumentParser argParser){
+    this->ip_address = argParser.server_ip;
+    this->port = std::to_string(argParser.port);
+    this->protocol = argParser.protocol;
+    this->timeout = argParser.timeout;
+    this->retries = argParser.retries;
+    if(this->protocol == Connection::Protocol::UDP){
+        this->client = UDPClient(this->ip_address,this->port);
+    }
+    else{
+        //TODO: Implement TCPClient in runner
+        // this->client = TCPClient(this->ip_address,this->port);
+    }
+}
+
 void handle_sigint(int sig) {
     ByePacket byePacket;
 
@@ -12,12 +28,6 @@ void handle_sigint(int sig) {
     exit(0);
 }
 
-// Runner::Runner(std::string ip_address, std::string port, Connection::Protocol protocol) {
-//     this->ip_address = ip_address;
-//     this->port = port;
-//     this->protocol = protocol;
-//     client = UDPClient(ip_address, port); // Fix: Initialize the client object using the constructor syntax
-// }
 
 
 void Runner::inputScanner(Connection &connection){
@@ -25,9 +35,16 @@ void Runner::inputScanner(Connection &connection){
     while (std::getline(std::cin, line)) {
         Input userInput;
         userInput.getNewInput(line);
+        
         std::lock_guard<std::mutex> lock(queue_mutex);
+    
         input_packet_queue.push(userInput.parseInput(connection));
-
+        //if userInput is nullpacket, then continue
+        if(std::holds_alternative<NullPacket>(input_packet_queue.back())){
+            std::cout << "Invalid input" << std::endl;
+            input_packet_queue.pop();
+            continue;
+        }    
         connection.message_id_map[connection.message_id-1] = false;
 
         queue_cond_var.notify_one(); 
@@ -52,17 +69,19 @@ void Runner::packetSender(Connection &connection) {
             input_packet_queue.pop();
             lock.unlock();
             
-            client.send(serialized_packet);
+        for (int attempt = 0; attempt < this->retries+1; ++attempt) {
+                client.send(serialized_packet);
 
-            std::cout << "Waiting\n";
-            //give this mutex a timeout of 5 seconds
+                std::cout << "Waiting\n";
 
-            std::unique_lock<std::mutex> reply_lock(reply_mutex);
-            if(reply_cond_var.wait_for(reply_lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
-                std::cout << "Timeout\n";
-            } else {
-                std::cout << "Good\n";
-                std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
+                std::unique_lock<std::mutex> reply_lock(reply_mutex);
+                if(reply_cond_var.wait_for(reply_lock, std::chrono::milliseconds(this->timeout)) == std::cv_status::timeout) {
+                    std::cout << "Timeout\n";
+                } else {
+                    std::cout << "Good\n";
+                    std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
+                    break; // Break out of the loop if the message was sent successfully
+                }
             }
         }
     }
@@ -105,35 +124,48 @@ void Runner::packetReceiver(Connection &connection) {
 }
 
 void Runner::processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
-
     if (std::holds_alternative<ReplyPacket>(recv_packet)) {
-        ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-        reply = client.receive();
-        // write reply.getData()[1]
-
-        std::visit([&](auto& p) { std::cout << p.getData()[1] << std::endl; }, recv_packet);
-
-        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
-        
-        if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
-            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-            std::vector<std::string> packet_data = confirm_packet.getData();
-            client.send(reply);
-        }
+        handleReplyPacket(connection, reply, recv_packet);
     }
-
     else if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
-        ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-        std::string prev_reply = reply;
-        reply = client.receive();
-        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
-        
-        if (std::holds_alternative<ReplyPacket>(recv_packet)) {
-            ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-            std::vector<std::string> packet_data = reply_packet.getData();
-            std::cout << "REPLY PACKET DATA - " << packet_data[2] << std::endl;
-            client.send(prev_reply);
+        handleConfirmPacket(connection, reply, recv_packet);
+    }
+}
+
+void Runner::handleReplyPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
+    ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+    reply = client.receive();
+    std::vector<std::string> packet_data = reply_packet.getData();
+
+    if (packet_data[0] != "1") {
+        connection.clearAfterAuth();
+        return; // No further processing needed if authentication failed
+    }
+    std::cout << "Message: " << packet_data[1] << std::endl;    
+
+    std::variant<RECV_PACKET_TYPE> next_recv_packet = ReceiveParser(reply, connection);
+    if (std::holds_alternative<ConfirmPacket>(next_recv_packet)) {
+        ConfirmPacket confirm_packet = std::get<ConfirmPacket>(next_recv_packet);
+        client.send(reply);
+    }
+}
+
+void Runner::handleConfirmPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
+    ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+    std::string prev_reply = reply;
+    reply = client.receive();
+    
+    std::variant<RECV_PACKET_TYPE> next_recv_packet = ReceiveParser(reply, connection);
+    if (std::holds_alternative<ReplyPacket>(next_recv_packet)) {
+        ReplyPacket reply_packet = std::get<ReplyPacket>(next_recv_packet);
+        std::vector<std::string> packet_data = reply_packet.getData();
+        if (packet_data[0] != "1") {
+            connection.clearAfterAuth();
+            return; // No need to proceed if authentication failed
         }
+        std::cout << "Message: " << packet_data[1] << std::endl;    
+
+        client.send(prev_reply);
     }
 }
 

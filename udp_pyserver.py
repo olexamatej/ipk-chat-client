@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import time
 import asyncio
 
+
 @dataclass
 class AuthMessage:
     message_id: int
@@ -11,11 +12,13 @@ class AuthMessage:
     display_name: str
     secret: str
 
+
 @dataclass
 class JoinMessage:
     message_id: int
     channel: str
     display_name: str
+
 
 @dataclass
 class MessageMessage:
@@ -23,11 +26,13 @@ class MessageMessage:
     display_name: str
     content: str
 
+
 @dataclass
 class ErrorMessage:
     message_id: int
     display_name: str
     content: str
+
 
 @dataclass
 class ReplyMessage:
@@ -36,19 +41,26 @@ class ReplyMessage:
     ref_message_id: int
     message_content: str
 
+
 @dataclass
 class ByeMessage:
     message_id: int
+
 
 @dataclass
 class ConfirmMessage:
     ref_message_id: int
 
+
 def parse_strings(data: bytes) -> list[str]:
     null_positions = [i for i, char in enumerate(data) if char == 0]
-    strings = [data[start+1:end].decode("ascii") for start, end in zip([-1] + null_positions, null_positions)]
+    strings = [
+        data[start + 1 : end].decode("ascii")
+        for start, end in zip([-1] + null_positions, null_positions)
+    ]
 
     return strings
+
 
 class UdpServer:
     def __init__(self, host, port):
@@ -73,7 +85,9 @@ class UdpServer:
 
         while True:
             print("Waiting for message...")
-            data, client_address = self.auth_socket.recvfrom(100)  # Adjust buffer size as needed
+            data, client_address = self.auth_socket.recvfrom(
+                100
+            )  # Adjust buffer size as needed
             decoded_message = self.decode_message(data)
             print(f"Received message from {client_address}: {decoded_message}")
 
@@ -98,14 +112,30 @@ class UdpServer:
                 msg = f"Welcome to the chat server {decoded_message.display_name}!"
                 fmt = f"!B H B H {len(msg)}s B"
 
-                data = struct.pack(fmt, 0x01, self.msg_id, 0x01, decoded_message.message_id, bytes(msg, "ascii") , 0x00)
+                data = struct.pack(
+                    fmt,
+                    0x01,
+                    self.msg_id,
+                    0x01,
+                    decoded_message.message_id,
+                    bytes(msg, "ascii"),
+                    0x00,
+                )
                 self.send_message(data, client_address)
                 self.msg_id += 1
 
             elif isinstance(decoded_message, JoinMessage):
-                msg = f"Wellcome to room {decoded_message.channel}"                    
+                msg = f"Wellcome to room {decoded_message.channel}"
                 fmt = f"!B H B H {len(msg)}s B"
-                data = struct.pack(fmt, 0x01, self.msg_id, 0x01, decoded_message.message_id, bytes(msg, "ascii") , 0x00)
+                data = struct.pack(
+                    fmt,
+                    0x01,
+                    self.msg_id,
+                    0x01,
+                    decoded_message.message_id,
+                    bytes(msg, "ascii"),
+                    0x00,
+                )
                 self.send_message(data, client_address)
                 self.msg_id += 1
 
@@ -113,48 +143,56 @@ class UdpServer:
                 msg = decoded_message.content
                 display_name = decoded_message.display_name
                 fmt = f"!B H {len(display_name)}s B {len(msg)}s B"
-                data = struct.pack(fmt, 0x04, self.msg_id, bytes(display_name, "ascii"), 0x00, bytes(msg, "ascii"), 0x00)
+                data = struct.pack(
+                    fmt,
+                    0x04,
+                    self.msg_id,
+                    bytes(display_name, "ascii"),
+                    0x00,
+                    bytes(msg, "ascii"),
+                    0x00,
+                )
                 self.send_message(data, client_address)
-                self.msg_id += 1
+                self.msg_id += 2
 
             elif isinstance(decoded_message, ByeMessage):
                 self.auth_socket.close()
                 return
 
     def decode_message(self, data):
-        message_type = struct.unpack('!B', data[0:1])[0]
+        message_type = struct.unpack("!B", data[0:1])[0]
 
         if message_type == 0x00:  # CONFIRM
-            ref_message_id = struct.unpack('!H', data[1:3])[0]
+            ref_message_id = struct.unpack("!H", data[1:3])[0]
             return ConfirmMessage(ref_message_id)
 
         elif message_type == 0x01:  # REPLY
-            message_id, result, ref_message_id = struct.unpack('!HBH', data[1:8])
+            message_id, result, ref_message_id = struct.unpack("!HBH", data[1:8])
             message_contents = parse_strings(data[8:])
             return ReplyMessage(message_id, result, ref_message_id, message_contents)
 
         elif message_type == 0x02:  # AUTH
-            message_id = struct.unpack('!H', data[1:3])[0]
+            message_id = struct.unpack("!H", data[1:3])[0]
             username, display_name, secret = parse_strings(data[3:])
             return AuthMessage(message_id, username, display_name, secret)
 
-        elif message_type == 0x03: # JOIN
-            message_id = struct.unpack('!H', data[1:3])[0]
+        elif message_type == 0x03:  # JOIN
+            message_id = struct.unpack("!H", data[1:3])[0]
             channel, display_name = parse_strings(data[3:])
             return JoinMessage(message_id, channel, display_name)
-        
+
         elif message_type == 0x04:
-            message_id = struct.unpack('!H', data[1:3])[0]
+            message_id = struct.unpack("!H", data[1:3])[0]
             display_name, content = parse_strings(data[3:])
             return MessageMessage(message_id, display_name, content)
-        
+
         elif message_type == 0xFE:
-            message_id = struct.unpack('!H', data[1:3])[0]
+            message_id = struct.unpack("!H", data[1:3])[0]
             display_name, content = parse_strings(data[3:])
             return ErrorMessage(message_id, display_name, content)
 
         elif message_type == 0xFF:
-            message_id = struct.unpack('!H', data[1:3])[0]
+            message_id = struct.unpack("!H", data[1:3])[0]
             return ByeMessage(message_id)
         else:
             None
@@ -163,19 +201,21 @@ class UdpServer:
         self.auth_socket.sendto(data, client_address)
 
         if data[0] != 0x00:
-            if (msg_id := struct.unpack('!H', data[1:3])[0]) not in self.pending_messages:
+            if (
+                msg_id := struct.unpack("!H", data[1:3])[0]
+            ) not in self.pending_messages:
                 self.pending_messages[msg_id] = 0
 
             self.loop.create_task(self.timeout_expired(data, client_address))
 
     def confirm_message(self, ref_message_id, client_address):
-        data = struct.pack('!B H', 0x00, ref_message_id)
+        data = struct.pack("!B H", 0x00, ref_message_id)
         self.send_message(data, client_address)
 
     async def timeout_expired(self, data, client_address):
         await asyncio.sleep(0.250)
 
-        msg_id = struct.unpack('!H', data[1:3])[0]
+        msg_id = struct.unpack("!H", data[1:3])[0]
 
         if msg_id in self.pending_messages:
             await self.send_message(data, client_address)

@@ -108,6 +108,14 @@ void Runner::packetReceiver(Connection &connection) {
                 continue;
             }   
         }
+        else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<ByePacket>(recv_packet) 
+           || std::holds_alternative<NullPacket>(recv_packet)){
+            //send bye packet and end
+            ByePacket bye_packet;
+            client.send(bye_packet.serialize());
+            std::cout << "Error received, ending connection" << std::endl;
+            exit(1);
+           }
         else{
             //call the .getData() method of the packet and print the data
             std::cout << "Message received: \n";
@@ -141,7 +149,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
             replied = true;
 
         }
-        if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
+        else if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
             ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
             std::vector<std::string> packet_data = confirm_packet.getData();
             uint16_t messageID = std::stoi(packet_data[0]);
@@ -153,6 +161,15 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
                 continue;
             } 
         }
+        else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<ByePacket>(recv_packet) 
+           || std::holds_alternative<NullPacket>(recv_packet)){
+            //send bye packet and end
+            ByePacket bye_packet;
+            client.send(bye_packet.serialize());
+            std::cout << "Error received, ending connection" << std::endl;
+            exit(1);
+        }
+
         if(confirmed && replied){
             break;
         }

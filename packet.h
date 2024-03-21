@@ -9,7 +9,7 @@
 #include <string>
 #include "connection.h"
 
-#define RECV_PACKET_TYPE MsgPacket, ErrorPacket, ReplyPacket, ConfirmPacket
+#define RECV_PACKET_TYPE MsgPacket, ErrorPacket, ReplyPacket, ConfirmPacket, ByePacket, NullPacket
 
 
 class PacketTCP {
@@ -89,11 +89,13 @@ class ConfirmPacket : public PacketTCP {
 class NullPacket : public PacketTCP {
     public:
         std::string serialize(Connection &connection){return "";};
+        std::vector <std::string> getData() {return {};}
 };
 
 class ByePacket : public PacketTCP {
     public:
         std::string serialize();
+        std::vector <std::string> getData() {return {};}
 };
 
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection &connection);

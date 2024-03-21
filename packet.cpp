@@ -407,9 +407,13 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 ErrorPacket error_packet(tokens);
                 return error_packet;
             }
-            else {
+            else if(packetType == "MSG"){
                 MsgPacket msgPacket(tokens[3], tokens[5]);
                 return msgPacket;
+            }
+            else{
+                std::cout << "Invalid packet" << std::endl;
+                return NullPacket();                            
             }
         }
         //TODO throw exception
@@ -441,10 +445,9 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 return msg_packet;
             }
             default:
-                //TODO Error
-                std::cout << "Invalid packet, error in switchcase" << std::endl;
-                std::cout << "First byte: " << data << std::endl;
-                exit(1);
+                std::cout << "Invalid packet" << std::endl;
+                return NullPacket();
+                
         }
 
     }

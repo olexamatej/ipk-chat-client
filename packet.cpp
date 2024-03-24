@@ -411,6 +411,11 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 MsgPacket msgPacket(tokens[3], tokens[5]);
                 return msgPacket;
             }
+            else if(packetType == "BYE"){
+                //TODO throw exception
+                std::cout << "Received BYE packet, ending connection" << std::endl;
+                exit(1);
+            }
             else{
                 std::cout << "Invalid packet" << std::endl;
                 return NullPacket();                            
@@ -418,7 +423,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
         }
         //TODO throw exception
         std::cout << "Invalid packet" << std::endl;
-        exit(1);
+        return NullPacket();    
     }
     else if(connection.protocol == Connection::Protocol::UDP){
         // Convert data to vector of bytes
@@ -444,6 +449,11 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 MsgPacket msg_packet(data_bytes);
                 return msg_packet;
             }
+            case 0xFF:{
+                std::cout << "Received BYE packet, ending connection" << std::endl;
+                exit(1);
+            }
+
             default:
                 std::cout << "Invalid packet" << std::endl;
                 return NullPacket();

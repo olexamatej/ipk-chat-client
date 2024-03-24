@@ -19,7 +19,10 @@ class Runner {
         void run();
         void inputScanner(Connection &connection);
         void packetSender(Connection &connection);
+        void packetSenderTCP(Connection &connection);
         void packetReceiver(Connection &connection);
+        void packetReceiverTCP(Connection &connection);
+
         void processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);
         void handleReplyPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);
         void handleConfirmPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);

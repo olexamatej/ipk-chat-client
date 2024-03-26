@@ -361,7 +361,7 @@ ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
         }
 
         std::string content = "";
-        for(int i = 4; i < data.size(); i++){
+        for(int i = 3; i < data.size(); i++){
             content += data[i] + " ";
         }
         this->content = content;

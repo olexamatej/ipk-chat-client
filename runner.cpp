@@ -170,6 +170,7 @@ void Runner::packetReceiverTCP(Connection &connection){
                         connection.clearAfterAuth(); 
                     }
                 }
+                std::cout << packet_data[1] << std::endl;
             }
             else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<NullPacket>(recv_packet)){
                 //send bye packet and end

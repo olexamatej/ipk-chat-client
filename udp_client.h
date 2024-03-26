@@ -7,14 +7,14 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <unistd.h>
-
-class UDPClient {
+#include "client.h"
+class UDPClient : public Client{
     public:
         UDPClient();
         UDPClient(const std::string ip_address,const std::string port);
         void send(std::string message);
         std::string receive();
-        void create_socket();
+        void connect();
     private:
         int _socket;
         std::string ip_address;

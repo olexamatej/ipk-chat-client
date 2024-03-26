@@ -1,3 +1,5 @@
+#ifndef RUNNER_H
+#define RUNNER_H
 #include "udp_client.h"
 #include "tcp_client.h"
 #include "inputParser.h"
@@ -16,6 +18,7 @@
 class Runner {
     public:
         Runner(ArgumentParser argParser);
+        ~Runner();
         void run();
         void inputScanner(Connection &connection);
         void packetSender(Connection &connection);
@@ -40,6 +43,8 @@ class Runner {
         uint16_t timeout;
         uint8_t retries;
         Connection::Protocol protocol;
-        UDPClient client;
+        Client *client;
 };
 
+
+#endif

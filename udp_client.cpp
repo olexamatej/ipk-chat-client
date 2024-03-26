@@ -6,10 +6,10 @@ UDPClient::UDPClient(){
 UDPClient::UDPClient(std::string ip_address, std::string port){
     this->ip_address = ip_address;
     this->port = port;
-    create_socket();
+    connect();
 }
 
-void UDPClient::create_socket() {
+void UDPClient::connect() {
     int status;
     struct addrinfo hints;
     

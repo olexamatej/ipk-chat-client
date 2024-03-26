@@ -48,9 +48,11 @@ class TCPServer:
                         f"MSG FROM Server IS {client.display_name} has joined room {client.current_room}\r\n",
                         client.current_room,
                     )
-                    # print("Sending error")
-                    # await self.send_message(f"ERR FROM Server IS This is a test error message\r\n", writer)
-                    # print("Sent error")
+                    print("Sending error")
+                    await self.send_message(
+                        f"ERR FROM Server IS This is a test error message\r\n", writer
+                    )
+                    print("Sent error")
 
                 case ["JOIN", channel, "AS", display_name]:
                     client.display_name = display_name

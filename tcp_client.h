@@ -8,8 +8,9 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <string>
+#include "client.h"
 
-class TCPClient {
+class TCPClient : public Client{
     public:
         TCPClient(std::string ip_address, std::string port);
         ~TCPClient();

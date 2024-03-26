@@ -14,6 +14,7 @@
 
 int main(int argc, char *argv[]) {
     ArgumentParser argParser(argc, argv);
+
     Runner(argParser).run();
 
 

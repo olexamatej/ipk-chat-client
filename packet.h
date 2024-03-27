@@ -58,7 +58,9 @@ class ErrorPacket : public PacketTCP {
     public:
         ErrorPacket(const std::vector<std::string> data);
         ErrorPacket(const std::vector<uint8_t> data);
+        ErrorPacket(const std::string content, std::string dname);
         std::vector <std::string> getData();
+        std::string serialize(Connection &connection);
     protected:
         std::string dname;
         std::string content;

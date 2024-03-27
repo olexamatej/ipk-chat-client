@@ -287,8 +287,14 @@ ErrorPacket::ErrorPacket(const std::vector<std::string> data) {
     }
     this->dname = data[1];
     this->content = data[2];
-
 }
+
+ErrorPacket::ErrorPacket(std::string content, std::string dname){
+    this->content = content;
+    this->dname = dname;
+}
+
+
 ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     //displayname until 0 byte
@@ -303,13 +309,25 @@ ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     }
 }
 
+std::string ErrorPacket::serialize(Connection &connection){
+    if(connection.protocol == Connection::Protocol::TCP){
+        return "ERR FROM" + SP + this->dname + IS + this->content + CRLF;
+    }
+    else if(connection.protocol == Connection::Protocol::UDP){
+        //TODO
+    }
+    std::cout<< "Invalid protocol" << std::endl;
+    exit(1);
+
+}
+
 ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     this->success = data[3];
     uint16_t Ref_messageID = (data[4] << 8) + data[5];
     this->content = std::string(data.begin() + 6, data.end());
-
 }
+
 
 ConfirmPacket::ConfirmPacket(const std::vector<uint8_t> data){
     this->refID = std::to_string((data[1] << 8) + data[2]);
@@ -403,7 +421,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 ReplyPacket reply_packet(tokens);
                 return reply_packet;
             }
-            else if(packetType == "ERROR"){
+            else if(packetType == "ERR"){
                 ErrorPacket error_packet(tokens);
                 return error_packet;
             }
@@ -417,7 +435,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 exit(1);
             }
             else{
-                std::cout << "Invalid packet" << std::endl;
+                std::cout << "Invalid packett" << std::endl;
                 return NullPacket();                            
             }
         }

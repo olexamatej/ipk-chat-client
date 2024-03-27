@@ -172,11 +172,22 @@ void Runner::packetReceiverTCP(Connection &connection){
                 }
                 std::cout << packet_data[1] << std::endl;
             }
-            else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<NullPacket>(recv_packet)){
+            else if(std::holds_alternative<ErrorPacket>(recv_packet)){
                 //send bye packet and end
+                std::cout<< "eyo";
                 ByePacket bye_packet;
                 client->send(bye_packet.serialize());
                 std::cout << "Error received, ending connection" << std::endl;
+                exit(1);
+            }
+            else if(std::holds_alternative<NullPacket>(recv_packet)){
+                //create error packet and send it
+                std::cout << "posielam error\n";
+                ErrorPacket error_packet("Invalid packet received", connection.display_name);
+                client->send(error_packet.serialize(connection));
+                std::cout << "Invalid packet received, ending connection" << std::endl;
+                ByePacket bye_packet;
+                client->send(bye_packet.serialize());
                 exit(1);
             }
             else{

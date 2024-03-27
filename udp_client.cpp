@@ -31,6 +31,9 @@ void UDPClient::connect() {
     
     //TODO FREE memory at the end
     // freeaddrinfo(servinfo);
+
+    
+
 }
 
 void UDPClient::send(std::string message) {

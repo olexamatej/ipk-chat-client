@@ -6,8 +6,8 @@ fix ctrl+c to send bye packet
 Proper received message writeup
 Check if multiple clients on server work - Fix message receiving 
 create another constructor for MSG, or find other way to check if received messages are correct - you made legalCheck, just dont exit on invalid
+
 read until \r\n, split the messages //mby skip
-fix rename
 add memory freeing on exit (mby its needed only in UDP)
 change error to be printed to std::cerr
 [A-Z]|[a-z]|[0-9]| - username, channelid and secret must follow this grammar
@@ -15,8 +15,6 @@ change error to be printed to std::cerr
 test TCP
 TCP Packet receiver, add exit on error/bye
 Check if multiple clients on server work - Fix message receiving 
-check if received messages are correct
-fix rename
 program exits on using invalid chars but probs shouldnt, check it
 
 
@@ -28,6 +26,8 @@ check if confirm messages are correct ID
 UDP Errorpacket send
 add sending BYE packet in udp
 error when getting reply without sending join:3
+fix rename
+check if received messages are correct
 
 
 start->auth works

@@ -6,7 +6,6 @@ const std::string AS = " AS ";
 const std::string CRLF = "\r\n";
 
 MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
-    std::cout<< dname << " " << content << std::endl;
     if(dname == "" || content == ""){
         //TODO throw exception
         std::cout << "Dname or content is empty" << std::endl;
@@ -254,13 +253,8 @@ std::string AuthPacket::serialize(Connection &connection) {
 }
 
 ErrorPacket::ErrorPacket(const std::vector<std::string> data) {
-    if(data.size() != 3){
-        //TODO throw exception
-        std::cout << "Invalid number of arguments" << std::endl;
-        exit(1);
-    }
-    this->dname = data[1];
-    this->content = data[2];
+    this->dname = data[2];
+    this->content = data[4];
 }
 
 ErrorPacket::ErrorPacket(std::string content, std::string dname){
@@ -338,8 +332,7 @@ ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
             exit(1);
         }
         if(data[0] + SP + data[2] != "REPLY IS"){
-            std::cout << data[0] + SP + data[2] << std::endl;
-            std::cout << "Invalid format of reply" << std::endl;
+            std::cerr << "Invalid format of reply" << std::endl;
             exit(1);
         } 
 
@@ -348,13 +341,16 @@ ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
         } else if(data[1] == "NOK"){
             this->success = false;
         } else {
-            std::cout << "Invalid format of reply" << std::endl;
+            std::cerr << "ERR: Invalid format of reply" << std::endl;
             exit(1);
         }
 
         std::string content = "";
         for(int i = 3; i < data.size(); i++){
-            content += data[i] + " ";
+            content += data[i];
+            if (i != data.size() - 1) {
+               content += " ";
+            }
         }
         this->content = content;
     }
@@ -410,12 +406,11 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 exit(1);
             }
             else{
-                std::cout << "Invalid packett" << std::endl;
+                std::cerr << "ERR: Invalid packet" << std::endl;
                 return NullPacket();                            
             }
         }
         //TODO throw exception
-        std::cout << "Invalid packet" << std::endl;
         return NullPacket();    
     }
     else if(connection.protocol == Connection::Protocol::UDP){
@@ -448,7 +443,6 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
             }
 
             default:
-                std::cout << "Invalid packet" << std::endl;
                 return NullPacket();
                 
         }

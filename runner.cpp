@@ -2,6 +2,9 @@
 #define TIMEOUT 50
 #include <signal.h>
 
+//global variable for sigint
+
+Client *Runner::client = nullptr;
 
 Runner::Runner(ArgumentParser argParser){
     this->ip_address = argParser.server_ip;
@@ -27,12 +30,13 @@ Runner::~Runner(){
     delete client;
 }
 
+
 void handle_sigint(int sig) {
     ByePacket byePacket;
 
     std::string serialized_byePacket = byePacket.serialize();
 
-    // client.send(serialized_byePacket);
+    Runner::client->send(serialized_byePacket);
 
     exit(0);
 }
@@ -50,7 +54,10 @@ void Runner::inputScanner(Connection &connection){
             input_packet_queue.push(userInput.parseInput(connection));
             //if userInput is nullpacket, then continue
             if(std::holds_alternative<NullPacket>(input_packet_queue.back())){
-                std::cerr << "ERR: Invalid input" << std::endl;
+                //check if rename in NullPacket is true
+                // if(!std::get<NullPacket>(input_packet_queue.back()).rename){
+                //     std::cerr << "ERR: Invalid input" << std::endl;
+                // }
                 input_packet_queue.pop();
                 continue;
             }    
@@ -69,13 +76,19 @@ void Runner::inputScanner(Connection &connection){
             input_packet_queue.push(userInput.parseInput(connection));
             //if userInput is nullpacket, then continue
             if(std::holds_alternative<NullPacket>(input_packet_queue.back())){
-                std::cerr << "ERR: Invalid input" << std::endl;
+                if(!std::get<NullPacket>(input_packet_queue.back()).rename){
+                    std::cerr << "ERR: Invalid input" << std::endl;
+                }
                 input_packet_queue.pop();
                 continue;
             }    
 
             queue_cond_var.notify_one(); 
         }
+        std::cerr << "ERR: End of input\n";
+        ByePacket byePacket;
+        client->send(byePacket.serialize());
+        return;
     }
 }
 
@@ -106,7 +119,6 @@ void Runner::packetSenderTCP(Connection &connection){
 
                 std::unique_lock<std::mutex> lock(reply_mutex);
                 reply_cond_var.wait(lock);
-                std::cout << "Good\n";
             }
         }
 }
@@ -153,18 +165,18 @@ void Runner::packetReceiverTCP(Connection &connection){
             if(std::holds_alternative<ReplyPacket>(recv_packet) ){
                 if(!(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet))){
                     //TODO error exit
-                    std::cerr  << "Invalid packet received, ending connection" << std::endl;
+                    std::cerr  << "ERR: Invalid packet received, ending connection" << std::endl;
                     exit(1);
                 }                
                 if(packet_data[0] == "1"){
-                    std::cout << "Success: \n";
+                    std::cerr << "Success: ";
                 } else {
                     if(std::holds_alternative<AuthPacket>(send_packet)){
-                        std::cout << "Failure: ";
                         connection.clearAfterAuth(); 
                     }    
+                    std::cerr << "Failure: ";
                 }
-                std::cout << packet_data[1] << "\n";
+                std::cerr << packet_data[1] << std::endl;
             }
             else if(std::holds_alternative<ErrorPacket>(recv_packet)){
                 //send bye packet and end
@@ -176,18 +188,17 @@ void Runner::packetReceiverTCP(Connection &connection){
             }
 
             else if(std::holds_alternative<NullPacket>(recv_packet)){
-                std::cout << "posielam error\n";
                 ErrorPacket error_packet("Invalid packet received", connection.display_name);
                 client->send(error_packet.serialize(connection));
 
                 std::cerr << "ERR: Invalid packet received" << std::endl;
                 ByePacket bye_packet;
+                sleep(1);
                 client->send(bye_packet.serialize());
                 exit(1);
             }
             else{
-                std::cout << "Message received: \n";
-                std::cout << packet_data[1] << std::endl;
+                std::cout << packet_data[0] << ": "<< packet_data[1] << std::endl;
             }
             
             std::unique_lock<std::mutex> lock(reply_mutex);
@@ -221,11 +232,15 @@ void Runner::packetReceiver(Connection &connection) {
             //send bye packet and end
             ByePacket bye_packet;
             client->send(bye_packet.serialize());
+            //TODO fix
+
             std::cout << "Error received, ending connection" << std::endl;
             exit(1);
            }
         else{
             //call the .getData() method of the packet and print the data
+            //TODO fix
+
             std::cout << "Message received: \n";
             std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
             std::cout << packet_data[1] << std::endl;
@@ -251,6 +266,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
                 connection.clearAfterAuth();
                 return; // No further processing needed if authentication failed
             }
+            //TODO fix
             std::cout << "Message: " << packet_data[1] << std::endl;    
             ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
             client->send(confirm_packet.serialize());
@@ -273,7 +289,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
             //send bye packet and end
             ByePacket bye_packet;
             client->send(bye_packet.serialize());
-            std::cout << "Error received, ending connection" << std::endl;
+            std::cerr << "ERR: Error message received, ending connection" << std::endl;
             exit(1);
         }
 
@@ -284,6 +300,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
         recv_packet = ReceiveParser(reply, connection);
 
     }
+    //TODO FIX
     std::cout << "\nAuthentication successful" << std::endl;
 }
 
@@ -293,7 +310,7 @@ void Runner::run(){
 
     // std::cout << "Connected \n";
     
-    // signal(SIGINT, handle_sigint);
+    signal(SIGINT, handle_sigint);
 
      //thread for reading stdin, parsing them and sending them to other thread
      std::jthread inputThread([&](){

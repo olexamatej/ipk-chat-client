@@ -37,7 +37,6 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
     }
     switch(type){
         case CommandType::JOIN:{
-            std::cout << connection.display_name << std::endl;
             //print all arguments
             if(arguments.size() != 2){
                 std::cout << "Invalid number of arguments" << std::endl;
@@ -59,20 +58,25 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
             if(!authPacket.LegalCheck()){
                 return NullPacket();
             }
-            connection.id = authPacket.getData()[2];
-            connection.display_name = authPacket.getData()[0];
+            if(connection.id != "" && connection.display_name != ""){
+                return NullPacket();
+            }
+            connection.id = authPacket.getData()[0];
+            connection.display_name = authPacket.getData()[1];
             return authPacket;
 
         break;
         }
         case CommandType::RENAME:
             if(arguments.size() == 2){
-                std::cout << "Renaming" << std::endl;
                 connection.display_name = arguments[1];
+                NullPacket nullPacket;
+                nullPacket.rename = true;
+                return nullPacket;
             }
             else{
-                std::cout << "Invalid number of arguments" << std::endl;
-                exit(1);
+                std::cout << "ERR: Invalid number of arguments" << std::endl;
+                return NullPacket();
             }
         break;
         case CommandType::HELP:

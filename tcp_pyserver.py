@@ -41,12 +41,11 @@ class TCPServer:
                         username, display_name, password, "lobby", writer, reader
                     )
                     await self.send_message(
-                        f"REPLY OK IS Welcome to the chat server {display_name}!\r\n",
+                        f"REPLY NOK IS Welcome to the chat server {display_name}!\r\n",
                         writer,
                     )
-                    await self.broadcast(
-                        f"MSG FROM Server IS {client.display_name} has joined room {client.current_room}\r\n",
-                        client.current_room,
+                    await self.send_message(
+                        f"TVOJE MAMINKA\r\n",
                     )
                     # print("Sending error")
                     # await self.send_message(

@@ -4,6 +4,8 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <cstdint>
+
 
 class Connection {
     public:

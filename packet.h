@@ -92,6 +92,7 @@ class NullPacket : public PacketTCP {
     public:
         std::string serialize(Connection &connection){return "";};
         std::vector <std::string> getData() {return {};}
+        bool rename = false;
 };
 
 class ByePacket : public PacketTCP {

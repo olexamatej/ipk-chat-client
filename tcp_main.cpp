@@ -94,7 +94,6 @@ int main() {
                 if(reply_cond_var.wait_for(lock, std::chrono::seconds(TIMEOUT)) == std::cv_status::timeout) {
                     std::cout << "Timeout\n";
                 } else {
-                    std::cout << "Good\n";
                     std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
                 }   
             }

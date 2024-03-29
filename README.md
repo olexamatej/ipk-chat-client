@@ -1,20 +1,34 @@
 #TODO
 
+fix ctrl+c to send bye packet
+
+
 Proper received message writeup
+Check if multiple clients on server work - Fix message receiving 
+create another constructor for MSG, or find other way to check if received messages are correct - you made legalCheck, just dont exit on invalid
+read until \r\n, split the messages //mby skip
+fix rename
+add memory freeing on exit (mby its needed only in UDP)
+change error to be printed to std::cerr
+[A-Z]|[a-z]|[0-9]| - username, channelid and secret must follow this grammar
+
 test TCP
 TCP Packet receiver, add exit on error/bye
 Check if multiple clients on server work - Fix message receiving 
-Add UDP message ID checker std::map ? works probs - probs doesnt work for auth and join packets
-create another constructor for MSG, or find other way to check if received messages are correct
-check if confirm messages are correct ID
-read until \r\n, split the messages //this might not be a problem
+check if received messages are correct
 fix rename
-UDP Errorpacket send
 program exits on using invalid chars but probs shouldnt, check it
 
 
 
 MEELEY CHECKER FOR TCP
+
+Add UDP message ID checker std::map ? works probs - probs doesnt work for auth and join packets
+check if confirm messages are correct ID
+UDP Errorpacket send
+add sending BYE packet in udp
+error when getting reply without sending join:3
+
 
 start->auth works
 auth->auth idk, test it

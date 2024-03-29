@@ -50,7 +50,7 @@ void Runner::inputScanner(Connection &connection){
             input_packet_queue.push(userInput.parseInput(connection));
             //if userInput is nullpacket, then continue
             if(std::holds_alternative<NullPacket>(input_packet_queue.back())){
-                std::cout << "Invalid input" << std::endl;
+                std::cerr << "ERR: Invalid input" << std::endl;
                 input_packet_queue.pop();
                 continue;
             }    
@@ -69,7 +69,7 @@ void Runner::inputScanner(Connection &connection){
             input_packet_queue.push(userInput.parseInput(connection));
             //if userInput is nullpacket, then continue
             if(std::holds_alternative<NullPacket>(input_packet_queue.back())){
-                std::cout << "Invalid input" << std::endl;
+                std::cerr << "ERR: Invalid input" << std::endl;
                 input_packet_queue.pop();
                 continue;
             }    
@@ -101,13 +101,12 @@ void Runner::packetSenderTCP(Connection &connection){
             client->send(serialized_packet);
 
             if(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)){
-                std::cout << "Waiting\n";
+                // std::cout << "Waiting\n";
                 //give this mutex a timeout of 5 seconds
 
                 std::unique_lock<std::mutex> lock(reply_mutex);
                 reply_cond_var.wait(lock);
                 std::cout << "Good\n";
-                std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
             }
         }
 }
@@ -133,14 +132,9 @@ void Runner::packetSender(Connection &connection) {
         for (int attempt = 0; attempt < this->retries+1; ++attempt) {
                 client->send(serialized_packet);
 
-                std::cout << "Waiting\n";
-
                 std::unique_lock<std::mutex> reply_lock(reply_mutex);
                 if(reply_cond_var.wait_for(reply_lock, std::chrono::milliseconds(this->timeout)) == std::cv_status::timeout) {
-                    std::cout << "Timeout\n";
                 } else {
-                    std::cout << "Good\n";
-                    std::cout << "Message sent: " << serialized_packet << std::endl; // Print the message that was sent
                     break; // Break out of the loop if the message was sent successfully
                 }
             }
@@ -151,48 +145,48 @@ void Runner::packetSender(Connection &connection) {
 void Runner::packetReceiverTCP(Connection &connection){
          while(1) {
             std::string reply = client->receive();
-            std::cout << "Received: ";
-            std::cout << reply << std::endl;            
-            
             //print message that was sent
             
             std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
             std::vector<std::string> packet_data;
-            if(std::holds_alternative<ReplyPacket>(recv_packet)){
-                std::visit([&](auto& p) { packet_data = p.getData(); }, recv_packet);
-                std::cout << packet_data[0] << std::endl;
+            std::visit([&](auto& p) { packet_data = p.getData(); }, recv_packet);
+            if(std::holds_alternative<ReplyPacket>(recv_packet) ){
+                if(!(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet))){
+                    //TODO error exit
+                    std::cerr  << "Invalid packet received, ending connection" << std::endl;
+                    exit(1);
+                }                
                 if(packet_data[0] == "1"){
-                    std::cout << "Success\n";
+                    std::cout << "Success: \n";
                 } else {
-                    std::cout << "Failure\n";
                     if(std::holds_alternative<AuthPacket>(send_packet)){
-                        std::cout << "Authentication failed\n";
+                        std::cout << "Failure: ";
                         connection.clearAfterAuth(); 
-                    }
+                    }    
                 }
-                std::cout << packet_data[1] << std::endl;
+                std::cout << packet_data[1] << "\n";
             }
             else if(std::holds_alternative<ErrorPacket>(recv_packet)){
                 //send bye packet and end
-                std::cout<< "eyo";
                 ByePacket bye_packet;
                 client->send(bye_packet.serialize());
-                std::cout << "Error received, ending connection" << std::endl;
+                //TODO error exit
+                std::cerr << "ERR FROM " << packet_data[0] << ": " << packet_data[1] << std::endl;
                 exit(1);
             }
+
             else if(std::holds_alternative<NullPacket>(recv_packet)){
-                //create error packet and send it
                 std::cout << "posielam error\n";
                 ErrorPacket error_packet("Invalid packet received", connection.display_name);
                 client->send(error_packet.serialize(connection));
-                std::cout << "Invalid packet received, ending connection" << std::endl;
+
+                std::cerr << "ERR: Invalid packet received" << std::endl;
                 ByePacket bye_packet;
                 client->send(bye_packet.serialize());
                 exit(1);
             }
             else{
                 std::cout << "Message received: \n";
-                std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
                 std::cout << packet_data[1] << std::endl;
             }
             
@@ -297,7 +291,7 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
 void Runner::run(){
     Connection connection = Connection(this->ip_address, this->port, this->protocol);
 
-    std::cout << "Connected \n";
+    // std::cout << "Connected \n";
     
     // signal(SIGINT, handle_sigint);
 

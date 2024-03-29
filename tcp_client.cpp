@@ -47,7 +47,7 @@ void TCPClient::send(std::string message) {
     if (bytes_sent == -1) {
         perror("send");
     }
-    std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
+    // std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
 std::string TCPClient::receive(){
@@ -57,10 +57,10 @@ std::string TCPClient::receive(){
         perror("recv");
         return "";
     } else if (bytes_received == 0) {
-        std::cout << "Connection closed by " << ip_address << ":" << port << std::endl;
+        // std::cout << "Connection closed by " << ip_address << ":" << port << std::endl;
         return "";
     }
-    std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;
+    // std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;
     return std::string(buffer, bytes_received);
 }
 

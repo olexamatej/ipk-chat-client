@@ -32,7 +32,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
 
     // std::cout << "input is " << this->line << std::endl;
     if((display_name == "" || id == "") && type != CommandType::AUTH){
-        std::cout << "Please authenticate first" << std::endl;
+        // std::cerr << "ERR: Please authenticate first" << std::endl;
         return NullPacket();
     }
     switch(type){
@@ -59,8 +59,8 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
             if(!authPacket.LegalCheck()){
                 return NullPacket();
             }
-            connection.id = authPacket.getData()[0];
-            connection.display_name = authPacket.getData()[1];
+            connection.id = authPacket.getData()[2];
+            connection.display_name = authPacket.getData()[0];
             return authPacket;
 
         break;
@@ -77,7 +77,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         break;
         case CommandType::HELP:
         break;
-        default:{            
+        default:{    
             MsgPacket msgPacket(display_name, this->line);
             if(!msgPacket.LegalCheck()){
                 return NullPacket();

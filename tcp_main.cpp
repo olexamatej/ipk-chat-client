@@ -21,15 +21,15 @@ std::string port = "4567";
 TCPClient client(ip_address, port);
 
 
-void handle_sigint(int sig) {
-    ByePacket byePacket;
+// void handle_sigint(int sig) {
+//     ByePacket byePacket;
 
-    std::string serialized_byePacket = byePacket.serialize();
+//     std::string serialized_byePacket = byePacket.serialize();
 
-    client.send(serialized_byePacket);
+//     client.send(serialized_byePacket);
 
-    exit(0);
-}
+//     exit(0);
+// }
 
 /*
 int main() {

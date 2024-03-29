@@ -60,8 +60,8 @@ std::string MsgPacket::serialize(Connection &connection) {
         packet.push_back(0x04);
 
         // Add MessageID
-        packet.push_back(id_num & 0xFF);  // Low byte
         packet.push_back(id_num >> 8);  // High byte
+        packet.push_back(id_num & 0xFF);  // Low byte
 
         // Add DisplayName
         for (char c : this->dname) {
@@ -125,8 +125,8 @@ std::string JoinPacket::serialize(Connection &connection) {
         packet.push_back(0x03);
 
         // Add MessageID
-        packet.push_back(id_num & 0xFF);  // Low byte
         packet.push_back(id_num >> 8);  // High byte
+        packet.push_back(id_num & 0xFF);  // Low byte
 
         for (char c : this->id) {
             packet.push_back(c);
@@ -214,9 +214,9 @@ std::string AuthPacket::serialize(Connection &connection) {
         // Start with 0x02
         packet.push_back(0x02);
 
-        // Add MessageID
-        packet.push_back(id_num & 0xFF);  // Low byte
+            // Add MessageID
         packet.push_back(id_num >> 8);  // High byte
+        packet.push_back(id_num & 0xFF);  // Low byte
 
         // Add Username
         for (char c : id) {
@@ -282,7 +282,29 @@ std::string ErrorPacket::serialize(Connection &connection){
         return "ERR FROM" + SP + this->dname + IS + this->content + CRLF;
     }
     else if(connection.protocol == Connection::Protocol::UDP){
-        //TODO
+        //first byte is 0xFE, next 2 bytes are message ID, then display name until 0 byte, then content until 0 byte
+        std::vector<uint8_t> packet;
+        packet.push_back(0xFE);
+        uint16_t id_num = connection.message_id++;
+        packet.push_back(id_num >> 8);  // High byte
+        packet.push_back(id_num & 0xFF);  // Low byte
+
+        for (char c : this->dname) {
+            packet.push_back(c);
+        }
+
+        // Add 0 separator
+        packet.push_back(0);
+
+        for (char c : this->content) {
+            packet.push_back(c);
+        }
+
+        // Add 0 separator
+        packet.push_back(0);
+
+        std::string packet_str(packet.begin(), packet.end());
+        return packet_str;
     }
     std::cout<< "Invalid protocol" << std::endl;
     exit(1);
@@ -310,8 +332,10 @@ std::string ConfirmPacket::serialize() {
     std::vector <uint8_t> packet;
     packet.push_back(0x00);
     uint16_t id_num = std::stoi(refID);
-    packet.push_back(id_num & 0xFF);  // Low byte
+
     packet.push_back(id_num >> 8);  // High byte
+    packet.push_back(id_num & 0xFF);  // Low byte
+
     std::string packet_str(packet.begin(), packet.end());
     return packet_str;    
 }
@@ -452,8 +476,21 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
 
 
 
-std::string ByePacket::serialize() {
-    return "BYE" + CRLF;
+std::string ByePacket::serialize(Connection &connection) {
+    if(connection.protocol == Connection::Protocol::TCP){
+        return "BYE" + CRLF;
+    }
+    else if(connection.protocol == Connection::Protocol::UDP){
+        std::vector<uint8_t> packet;
+        //first byte is 0xFF, next 2 bytes are message ID
+        packet.push_back(0xFF);
+        uint16_t id_num = connection.message_id++;
+        packet.push_back(id_num >> 8);  // High byte
+        packet.push_back(id_num & 0xFF);  // Low byte
+
+        std::string packet_str(packet.begin(), packet.end());
+        return packet_str;
+    }
 }
 
 

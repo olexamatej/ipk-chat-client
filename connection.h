@@ -10,6 +10,7 @@
 class Connection {
     public:
 
+        Connection(){};
         enum Protocol {
             TCP,
             UDP

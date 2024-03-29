@@ -41,7 +41,6 @@ void UDPClient::send(std::string message) {
     if (bytes_sent == -1) {
         perror("send");
     }
-    std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
 std::string UDPClient::receive() {
@@ -51,7 +50,6 @@ std::string UDPClient::receive() {
     if (bytes_received == -1) {
         perror("recv");
     }
-    std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;
     return std::string(buffer, bytes_received);
 }
 

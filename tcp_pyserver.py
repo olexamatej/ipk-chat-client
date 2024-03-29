@@ -44,8 +44,9 @@ class TCPServer:
                         f"REPLY NOK IS Welcome to the chat server {display_name}!\r\n",
                         writer,
                     )
-                    await self.send_message(
-                        f"TVOJE MAMINKA\r\n",
+                    await self.broadcast(
+                        f"MSG FROM Server IS {client.display_name} has joined room {client.current_room}\r\n",
+                        client.current_room,
                     )
                     # print("Sending error")
                     # await self.send_message(

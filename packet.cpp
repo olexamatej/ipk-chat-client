@@ -6,12 +6,14 @@ const std::string AS = " AS ";
 const std::string CRLF = "\r\n";
 
 MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
+    std::cout<< dname << " " << content << std::endl;
     if(dname == "" || content == ""){
         //TODO throw exception
         std::cout << "Dname or content is empty" << std::endl;
         exit(1);
     }
     this->dname = dname;
+    this->content = content;
 }
 
 bool MsgPacket::LegalCheck(){
@@ -48,7 +50,7 @@ std::vector<std::string> MsgPacket::getData() {
 
 std::string MsgPacket::serialize(Connection &connection) {
     if(connection.protocol == Connection::Protocol::TCP){
-        return "MSG" + SP + this->dname + IS + this->content + CRLF;
+        return "MSG FROM" + SP + this->dname + IS + this->content + CRLF;
     }
     else if(connection.protocol == Connection::Protocol::UDP){
         std::vector<uint8_t> packet;
@@ -188,37 +190,9 @@ bool AuthPacket::LegalCheck(){
 
 AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
     
-    
     this->id = arguments[1];
-    //if this->id is longer than 20 characters
-    this->dname = arguments[2];
-
-    if(this->dname.length() > 20){
-        //TODO throw exception
-        std::cout << "Display name is too long" << std::endl;
-        exit(1);
-    }
-    for(char c : this->dname){
-        if(!isalnum(c) && c != '_'){
-            std::cout << "ID has invalid characters" << std::endl;
-            exit(1);
-        }
-    }
-
-    this->secret = arguments[3];
-
-    if(this->secret.length() > 128){
-        std::cout << "Display name is too long" << std::endl;
-        exit(1);
-    }
-
-    for(char c : this->secret){
-        if(!isalnum(c) && c != '-'){
-            std::cout << "ID has invalid characters" << std::endl;
-            exit(1);
-        }
-    }
-
+    this->dname = arguments[3];
+    this->secret = arguments[2];
 }
 
 std::vector<std::string> AuthPacket::getData() {
@@ -426,7 +400,8 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 return error_packet;
             }
             else if(packetType == "MSG"){
-                MsgPacket msgPacket(tokens[3], tokens[5]);
+                //TODO FIX
+                MsgPacket msgPacket(tokens[2], tokens[4]);
                 return msgPacket;
             }
             else if(packetType == "BYE"){
@@ -467,7 +442,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 MsgPacket msg_packet(data_bytes);
                 return msg_packet;
             }
-            case 0xFF:{
+            case 0xF:{
                 std::cout << "Received BYE packet, ending connection" << std::endl;
                 exit(1);
             }

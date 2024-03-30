@@ -39,6 +39,7 @@ class Runner {
         std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
 
         static Client *client;
+        std::atomic<bool> replied;
      
     private:
 

@@ -25,4 +25,5 @@ error when getting reply without sending join:3
 fix rename
 check if received messages are correct
 wait for confirm after ctrl c 
+make what happens if message is not confirmed at all
 

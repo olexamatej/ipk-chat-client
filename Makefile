@@ -14,7 +14,7 @@ OBJS := $(SRCS:.cpp=.o)
 HDRS := $(wildcard *.h)
 
 # Target executable
-TARGET := main
+TARGET := ipk24chat-client
 
 # Default target
 all: $(TARGET)
@@ -33,4 +33,4 @@ clean:
 
 run:
 	make
-	./main -t udp -s 127.0.0.1 -d 1000
+	./ipk24chat-client -t udp -s 127.0.0.1

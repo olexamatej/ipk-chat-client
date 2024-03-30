@@ -55,6 +55,10 @@ void Runner::inputScanner(Connection &connection){
 
             queue_cond_var.notify_one(); 
         }
+        std::cerr << "ERR: End of input\n";
+        ByePacket byePacket;
+        client->send(byePacket.serialize(connection));
+        return;
     }
     else if(connection.protocol == Connection::Protocol::TCP){
          while (std::getline(std::cin, line)) {
@@ -78,6 +82,7 @@ void Runner::inputScanner(Connection &connection){
         std::cerr << "ERR: End of input\n";
         ByePacket byePacket;
         client->send(byePacket.serialize(connection));
+        //TODO END
         return;
     }
 }
@@ -190,7 +195,9 @@ void Runner::packetSender(Connection &connection) {
                 std::unique_lock<std::mutex> reply_lock(reply_mutex);
                 if(reply_cond_var.wait_for(reply_lock, std::chrono::milliseconds(this->timeout)) == std::cv_status::timeout) {
                 } else {
-                    break; // Break out of the loop if the message was sent successfully
+                   if(replied.load()) {
+                         break; // Break out of the loop if the message was sent successfully and all messages have been confirmed
+                    }
                 }
             }
         }
@@ -199,15 +206,15 @@ void Runner::packetSender(Connection &connection) {
 
 void Runner::packetReceiver(Connection &connection) {
 
-    bool replied = true;
     while (1) {
         std::string reply = client->receive();
 
         std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
-        
+
         if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
 
-            replied = false;
+
+            replied.store(false);
             // processAuthJoin(connection, reply, recv_packet);
             if (std::holds_alternative<ReplyPacket>(recv_packet)) {
                 
@@ -221,7 +228,7 @@ void Runner::packetReceiver(Connection &connection) {
                 else{
                     std::cerr << "Success: " << packet_data[1] << "\n";
                 }
-                replied = true;
+                replied.store(true);
 
                 ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
                 client->send(confirm_packet.serialize());
@@ -240,13 +247,42 @@ void Runner::packetReceiver(Connection &connection) {
                 connection.message_id_map[messageID] = true;
             }         
         }
-        else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<NullPacket>(recv_packet)){
-            //send bye packet and end
+        else if(std::holds_alternative<ErrorPacket>(recv_packet)){
+            
+            //send confirm packet with same ID as recv_packet
+            std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
+
+            ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
+            client->send(confirm_packet.serialize());
+
             ByePacket bye_packet;
             client->send(bye_packet.serialize(connection));
             //TODO fix
+            std::cerr << "ERR FROM " << packet_data[0] << ": " << packet_data[1] << std::endl;
+            exit(1);
 
-            std::cerr << "ERR: Error received, ending connection" << std::endl;
+        }
+        else if(std::holds_alternative<NullPacket>(recv_packet)){
+
+            std::vector<uint8_t> data_bytes(reply.begin(), reply.end());\
+            if(data_bytes.size() < 2){
+                continue;
+            }
+            uint8_t first_byte = data_bytes[1];
+            uint8_t second_byte = data_bytes[2];
+            //put the bytes in a uint16_t
+
+            uint16_t messageID = (first_byte << 8) | second_byte;
+
+            ConfirmPacket confirm_packet(messageID);
+            client->send(confirm_packet.serialize());
+
+            ErrorPacket error_packet("Invalid packet received", connection.display_name);
+            client->send(error_packet.serialize(connection));
+            std::cerr << "ERR: Invalid packet received" << std::endl;
+            ByePacket bye_packet;
+            sleep(1);
+            client->send(bye_packet.serialize(connection));
             exit(1);
            }
         else if (std::holds_alternative<MsgPacket>(recv_packet)){

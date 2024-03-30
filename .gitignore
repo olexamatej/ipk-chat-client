@@ -8,3 +8,5 @@ testo.py
 .vscode/c_cpp_properties.json
 .vscode/c_cpp_properties.json
 *.json
+UDPTranslator.py
+UDPMessages.py

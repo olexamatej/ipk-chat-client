@@ -158,7 +158,8 @@ void Runner::packetReceiverTCP(Connection &connection){
                 }                
                 if(packet_data[0] == "1"){
                     std::cerr << "Success: ";
-                } else {
+                } 
+                else {
                     if(std::holds_alternative<AuthPacket>(send_packet)){
                         connection.clearAfterAuth(); 
                     }    
@@ -204,6 +205,7 @@ void Runner::packetReceiver(Connection &connection) {
         
         if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
             processAuthJoin(connection, reply, recv_packet);
+            send_packet = NullPacket();
         }
         else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
             ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
@@ -283,14 +285,6 @@ void Runner::processAuthJoin(Connection &connection, std::string &reply, std::va
             exit(1);
         }
         
-        else if(std::holds_alternative<MsgPacket>(recv_packet)){
-            std::vector<std::string> packet_data = std::get<MsgPacket>(recv_packet).getData();
-            std::cout << packet_data[0] << ": " << packet_data[1] << std::endl;
-            uint16_t messageID = std::stoi(packet_data[2]);
-            ConfirmPacket confirm_packet(messageID);
-            client->send(confirm_packet.serialize());
-        }
-
         if(confirmed && replied){
             break;
         }

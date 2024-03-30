@@ -1,6 +1,7 @@
 #include "runner.h"
 #define TIMEOUT 50
 #include <signal.h>
+#include <algorithm>
 
 //global variable for sigint
 
@@ -50,7 +51,7 @@ void Runner::inputScanner(Connection &connection){
                 input_packet_queue.pop();
                 continue;
             }    
-            connection.message_id_map[connection.message_id-1] = false;
+            connection.message_id_map[connection.message_id] = false;
 
             queue_cond_var.notify_one(); 
         }
@@ -113,36 +114,6 @@ void Runner::packetSenderTCP(Connection &connection){
 }
 
 
-void Runner::packetSender(Connection &connection) {
-        while(1) {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            queue_cond_var.wait(lock, [&] { return !input_packet_queue.empty(); });
-            if(input_packet_queue.empty()){
-                continue;
-            }
-
-            //get the first packet from the queue and call .serialize
-            send_packet = input_packet_queue.front();
-
-            std::string serialized_packet = "";
-            std::visit([&](auto& p) { serialized_packet = p.serialize(connection); }, send_packet);
-
-            input_packet_queue.pop();
-            lock.unlock();
-            
-        for (int attempt = 0; attempt < this->retries+1; ++attempt) {
-                client->send(serialized_packet);
-
-                std::unique_lock<std::mutex> reply_lock(reply_mutex);
-                if(reply_cond_var.wait_for(reply_lock, std::chrono::milliseconds(this->timeout)) == std::cv_status::timeout) {
-                } else {
-                    break; // Break out of the loop if the message was sent successfully
-                }
-            }
-        }
-    }
-
-
 void Runner::packetReceiverTCP(Connection &connection){
          while(1) {
             std::string reply = client->receive();
@@ -197,26 +168,77 @@ void Runner::packetReceiverTCP(Connection &connection){
 }
 
 
+void Runner::packetSender(Connection &connection) {
+        while(1) {
+            std::unique_lock<std::mutex> lock(queue_mutex);
+            queue_cond_var.wait(lock, [&] { return !input_packet_queue.empty(); });
+            if(input_packet_queue.empty()){
+                continue;
+            }
+
+            //get the first packet from the queue and call .serialize
+            send_packet = input_packet_queue.front();
+
+            std::string serialized_packet = "";
+            std::visit([&](auto& p) { serialized_packet = p.serialize(connection); }, send_packet);
+
+            input_packet_queue.pop();
+            lock.unlock();
+            
+        for (int attempt = 0; attempt < this->retries+1; ++attempt) {
+                client->send(serialized_packet);
+                std::unique_lock<std::mutex> reply_lock(reply_mutex);
+                if(reply_cond_var.wait_for(reply_lock, std::chrono::milliseconds(this->timeout)) == std::cv_status::timeout) {
+                } else {
+                    break; // Break out of the loop if the message was sent successfully
+                }
+            }
+        }
+    }
+
+
 void Runner::packetReceiver(Connection &connection) {
+
+    bool replied = true;
     while (1) {
         std::string reply = client->receive();
 
         std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
         
         if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
-            processAuthJoin(connection, reply, recv_packet);
-            send_packet = NullPacket();
+
+            replied = false;
+            // processAuthJoin(connection, reply, recv_packet);
+            if (std::holds_alternative<ReplyPacket>(recv_packet)) {
+                
+                ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
+                std::vector<std::string> packet_data = reply_packet.getData();
+
+                if (packet_data[0] == "0") {
+                    std::cerr << "Failure: " << packet_data[1] << "\n";
+                    connection.clearAfterAuth();
+                }
+                else{
+                    std::cerr << "Success: " << packet_data[1] << "\n";
+                }
+                replied = true;
+
+                ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
+                client->send(confirm_packet.serialize());
+                send_packet = NullPacket();
+            }
         }
-        else if(std::holds_alternative<ConfirmPacket>(recv_packet)){
+        if(std::holds_alternative<ConfirmPacket>(recv_packet)){
             ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
             std::vector<std::string> packet_data = confirm_packet.getData();
             uint16_t messageID = std::stoi(packet_data[0]);
+            //if messageID is not in message_id_map, then continue
+            if(connection.message_id_map.find(messageID) == connection.message_id_map.end()){
+            }
+
             if(connection.message_id_map[messageID] == false){
                 connection.message_id_map[messageID] = true;
             }         
-            else{
-                continue;
-            }   
         }
         else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<NullPacket>(recv_packet)){
             //send bye packet and end
@@ -227,10 +249,9 @@ void Runner::packetReceiver(Connection &connection) {
             std::cerr << "ERR: Error received, ending connection" << std::endl;
             exit(1);
            }
-        else{
+        else if (std::holds_alternative<MsgPacket>(recv_packet)){
             //call the .getData() method of the packet and print the data
             //TODO fix
-
             std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
             std::cout << packet_data[0] << ": " << packet_data[1] << std::endl;
             uint16_t messageID = std::stoi(packet_data[2]);
@@ -238,61 +259,16 @@ void Runner::packetReceiver(Connection &connection) {
             client->send(confirm_packet.serialize());
         }
         
-        std::unique_lock<std::mutex> lock(reply_mutex);
-        reply_cond_var.notify_one();
+
+
+        //if there isnt any message that hasnt been confirmed, then send the next message
+
+        if(std::all_of(connection.message_id_map.begin(), connection.message_id_map.end(), [](auto &p) { return p.second == true; }) &&
+            replied == true){
+            std::unique_lock<std::mutex> lock(reply_mutex);
+            reply_cond_var.notify_one();
+        }
     }
-}
-
-void Runner::processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet) {
-    
-    bool confirmed = false;
-    bool replied = false;
-    while(!confirmed || !replied) {
-        if (std::holds_alternative<ReplyPacket>(recv_packet)) {
-           ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
-            std::vector<std::string> packet_data = reply_packet.getData();
-
-
-            if (packet_data[0] == "0") {
-                std::cerr << "Failure: " << packet_data[1] << "\n";
-                connection.clearAfterAuth();
-            }
-            else{
-                std::cerr << "Success: " << packet_data[1] << "\n";
-            }
-            ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
-            client->send(confirm_packet.serialize());
-            replied = true;
-
-        }
-        else if (std::holds_alternative<ConfirmPacket>(recv_packet)) {
-            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
-            std::vector<std::string> packet_data = confirm_packet.getData();
-            uint16_t messageID = std::stoi(packet_data[0]);
-            if(connection.message_id_map[messageID] == false){
-                connection.message_id_map[messageID] = true;
-                confirmed = true;
-            }         
-            else{
-                continue;
-            } 
-        }
-        else if(std::holds_alternative<ErrorPacket>(recv_packet) || std::holds_alternative<NullPacket>(recv_packet)){
-            //send bye packet and end
-            ByePacket bye_packet;
-            client->send(bye_packet.serialize(connection));
-            std::cerr << "ERR: Error message received, ending connection" << std::endl;
-            exit(1);
-        }
-        
-        if(confirmed && replied){
-            break;
-        }
-        reply = client->receive();
-        recv_packet = ReceiveParser(reply, connection);
-
-    }
-    //TODO FIX
 }
 
 Connection connection;

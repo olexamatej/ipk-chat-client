@@ -33,4 +33,4 @@ clean:
 
 run:
 	make
-	./main -t udp -s 127.0.0.1
+	./main -t udp -s 127.0.0.1 -d 1000

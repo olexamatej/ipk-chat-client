@@ -109,8 +109,6 @@ void Runner::packetSenderTCP(Connection &connection){
             client->send(serialized_packet);
 
             if(std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)){
-                // std::cout << "Waiting\n";
-                //give this mutex a timeout of 5 seconds
 
                 std::unique_lock<std::mutex> lock(reply_mutex);
                 reply_cond_var.wait(lock);
@@ -201,8 +199,12 @@ void Runner::packetSender(Connection &connection) {
                 }
             }
         }
+        // If the loop finished without breaking, it means that the message wasn't sent successfully
+        if (!replied.load()) {
+            std::cerr << "Failed to send message after " << this->retries << " attempts. Exiting...\n";
+            exit(1);
+        }
     }
-
 
 void Runner::packetReceiver(Connection &connection) {
 
@@ -231,7 +233,7 @@ void Runner::packetReceiver(Connection &connection) {
                 replied.store(true);
 
                 ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
-                client->send(confirm_packet.serialize());
+                client->send(confirm_packet.serialize(connection));
                 send_packet = NullPacket();
             }
         }
@@ -253,7 +255,7 @@ void Runner::packetReceiver(Connection &connection) {
             std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
 
             ConfirmPacket confirm_packet(std::stoi(packet_data[2]));
-            client->send(confirm_packet.serialize());
+            client->send(confirm_packet.serialize(connection));
 
             ByePacket bye_packet;
             client->send(bye_packet.serialize(connection));
@@ -275,7 +277,7 @@ void Runner::packetReceiver(Connection &connection) {
             uint16_t messageID = (first_byte << 8) | second_byte;
 
             ConfirmPacket confirm_packet(messageID);
-            client->send(confirm_packet.serialize());
+            client->send(confirm_packet.serialize(connection));
 
             ErrorPacket error_packet("Invalid packet received", connection.display_name);
             client->send(error_packet.serialize(connection));
@@ -292,11 +294,9 @@ void Runner::packetReceiver(Connection &connection) {
             std::cout << packet_data[0] << ": " << packet_data[1] << std::endl;
             uint16_t messageID = std::stoi(packet_data[2]);
             ConfirmPacket confirm_packet(messageID);
-            client->send(confirm_packet.serialize());
+            client->send(confirm_packet.serialize(connection));
         }
         
-
-
         //if there isnt any message that hasnt been confirmed, then send the next message
 
         if(std::all_of(connection.message_id_map.begin(), connection.message_id_map.end(), [](auto &p) { return p.second == true; }) &&
@@ -310,7 +310,7 @@ void Runner::packetReceiver(Connection &connection) {
 Connection connection;
 
 
-void handle_sigint(int sig) {
+void handle_sigint(int) {
     ByePacket byePacket;
 
     std::string serialized_byePacket = byePacket.serialize(connection);

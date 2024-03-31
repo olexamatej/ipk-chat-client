@@ -12,17 +12,18 @@
 #define RECV_PACKET_TYPE MsgPacket, ErrorPacket, ReplyPacket, ConfirmPacket, ByePacket, NullPacket
 
 
-class PacketTCP {
+class Packet {
     public:
-        virtual std::string serialize(){return "";};
+        virtual std::string serialize(Connection&){return "";};
     protected:
         std::string input;
 };
 
-class MsgPacket : public PacketTCP {
+class MsgPacket : public Packet {
     public:
         MsgPacket(const std::string& dname, const std::string& content);
         MsgPacket(const std::vector<uint8_t> data);
+        using Packet::serialize;
         std::string serialize(Connection &connection);
         std::vector <std::string> getData();
         bool LegalCheck();
@@ -32,7 +33,7 @@ class MsgPacket : public PacketTCP {
         uint16_t messageID;
 };
 
-class JoinPacket : public PacketTCP {
+class JoinPacket : public Packet {
     public:
         JoinPacket(const std::vector<std::string>& arguments, const std::string& dname);
         std::string serialize(Connection &connection);
@@ -43,7 +44,7 @@ class JoinPacket : public PacketTCP {
 };
 
 
-class AuthPacket : public PacketTCP {
+class AuthPacket : public Packet {
     public:
         AuthPacket(const std::vector<std::string>& arguments);
         std::string serialize(Connection &connection);
@@ -54,7 +55,7 @@ class AuthPacket : public PacketTCP {
         bool LegalCheck();
 };
 
-class ErrorPacket : public PacketTCP {
+class ErrorPacket : public Packet {
     public:
         ErrorPacket(const std::vector<std::string> data);
         ErrorPacket(const std::vector<uint8_t> data);
@@ -67,7 +68,7 @@ class ErrorPacket : public PacketTCP {
         uint16_t messageID;
 };
 
-class ReplyPacket : public PacketTCP {
+class ReplyPacket : public Packet {
     public:
         ReplyPacket(const std::vector<std::string> data);
         ReplyPacket(const std::vector<uint8_t> data);
@@ -78,24 +79,24 @@ class ReplyPacket : public PacketTCP {
         uint16_t messageID;
 };
 
-class ConfirmPacket : public PacketTCP {
+class ConfirmPacket : public Packet {
     public:
         ConfirmPacket(const std::vector<uint8_t> data);
         ConfirmPacket(uint16_t messageID);
         std::vector <std::string> getData();
-        std::string serialize();
+        std::string serialize(Connection&);
     protected:
         std::string refID;
 };
 
-class NullPacket : public PacketTCP {
+class NullPacket : public Packet {
     public:
-        std::string serialize(Connection &connection){return "";};
+        std::string serialize(Connection&){return "";};
         std::vector <std::string> getData() {return {};}
         bool rename = false;
 };
 
-class ByePacket : public PacketTCP {
+class ByePacket : public Packet {
     public:
         std::string serialize(Connection &connection);
         std::vector <std::string> getData() {return {};}

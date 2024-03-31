@@ -10,3 +10,4 @@ testo.py
 *.json
 UDPTranslator.py
 UDPMessages.py
+server.py

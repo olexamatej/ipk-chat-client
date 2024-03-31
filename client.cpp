@@ -3,7 +3,7 @@
 Client::~Client() {
 }
 
-void Client::send(std::string message) {
+void Client::send(std::string) {
 }
 
 std::string Client::receive() {

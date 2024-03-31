@@ -61,7 +61,11 @@
         "queue": "cpp",
         "variant": "cpp",
         "map": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "charconv": "cpp",
+        "format": "cpp",
+        "iomanip": "cpp",
+        "span": "cpp"
     },
     "cSpell.words": [
         "servinfo"

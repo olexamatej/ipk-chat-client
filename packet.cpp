@@ -314,7 +314,7 @@ std::string ErrorPacket::serialize(Connection &connection){
 ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     this->success = data[3];
-    uint16_t Ref_messageID = (data[4] << 8) + data[5];
+    // uint16_t Ref_messageID = (data[4] << 8) + data[5];
     this->content = std::string(data.begin() + 6, data.end());
 }
 
@@ -328,7 +328,7 @@ ConfirmPacket::ConfirmPacket(uint16_t messageID){
     this->refID = std::to_string(messageID);
 }
 
-std::string ConfirmPacket::serialize() {
+std::string ConfirmPacket::serialize(Connection&) {
     std::vector <uint8_t> packet;
     packet.push_back(0x00);
     uint16_t id_num = std::stoi(refID);
@@ -370,7 +370,7 @@ ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
         }
 
         std::string content = "";
-        for(int i = 3; i < data.size(); i++){
+        for (std::vector<std::string>::size_type i = 3; i < data.size(); ++i) {
             content += data[i];
             if (i != data.size() - 1) {
                content += " ";
@@ -412,20 +412,39 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
             std::string packetType = tokens[0];
         
             if(packetType == "REPLY"){
+                if(tokens.size() < 4){
+                    //TODO throw exception
+                    std::cout << "Invalid number of arguments" << std::endl;
+                    exit(1);
+                }
                 ReplyPacket reply_packet(tokens);
                 return reply_packet;
             }
             else if(packetType == "ERR"){
+                if(tokens.size() < 4){
+                    //TODO throw exception
+                    std::cout << "Invalid number of arguments" << std::endl;
+                    exit(1);
+                }
                 ErrorPacket error_packet(tokens);
                 return error_packet;
             }
             else if(packetType == "MSG"){
                 //TODO FIX
+                if(tokens.size() < 5){
+                    //TODO throw exception
+                    std::cout << "Invalid number of arguments" << std::endl;
+                    exit(1);
+                }
                 MsgPacket msgPacket(tokens[2], tokens[4]);
                 return msgPacket;
             }
             else if(packetType == "BYE"){
                 //TODO throw exception
+                if(tokens.size() < 1){
+                    std::cout << "Invalid number of arguments" << std::endl;
+                    exit(1);
+                }
                 std::cout << "Received BYE packet, ending connection" << std::endl;
                 exit(1);
             }
@@ -472,6 +491,8 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
         }
 
     }
+    std::cerr<< "ERR: Invalid protocol" << std::endl;
+    exit(1);
 }
 
 
@@ -480,7 +501,7 @@ std::string ByePacket::serialize(Connection &connection) {
     if(connection.protocol == Connection::Protocol::TCP){
         return "BYE" + CRLF;
     }
-    else if(connection.protocol == Connection::Protocol::UDP){
+    else{
         std::vector<uint8_t> packet;
         //first byte is 0xFF, next 2 bytes are message ID
         packet.push_back(0xFF);

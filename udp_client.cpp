@@ -31,16 +31,22 @@ void UDPClient::connect() {
     }
 
     //initialize socket
-    if((this->_socket = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol)) < 0)
+    if ((this->_socket = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol)) < 0)
     {
         std::cerr << "Invalid socket.\n";
         exit(1);
-    }    
+    }
 
     sockaddr_in sendAddr;
+
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)server_info->ai_addr;
+    inet_pton(AF_INET, ip_address.c_str(), &(ipv4->sin_addr)); 
+
     sendAddr.sin_family = AF_INET;
-    sendAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+    sendAddr.sin_addr.s_addr = ipv4->sin_addr.s_addr;
     sendAddr.sin_port = htons(std::stoi(port));
+
+
 
     this->serverAddr = sendAddr;
 

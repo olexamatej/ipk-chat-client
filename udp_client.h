@@ -19,7 +19,8 @@ class UDPClient : public Client{
         int _socket;
         std::string ip_address;
         std::string port;
-        struct addrinfo *servinfo;
+        sockaddr_in serverAddr;
+
 };
 
 

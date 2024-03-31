@@ -242,8 +242,6 @@ void Runner::packetReceiver(Connection &connection) {
             std::vector<std::string> packet_data = confirm_packet.getData();
             uint16_t messageID = std::stoi(packet_data[0]);
             //if messageID is not in message_id_map, then continue
-            if(connection.message_id_map.find(messageID) == connection.message_id_map.end()){
-            }
 
             if(connection.message_id_map[messageID] == false){
                 connection.message_id_map[messageID] = true;

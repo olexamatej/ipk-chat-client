@@ -436,7 +436,15 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                     std::cout << "Invalid number of arguments" << std::endl;
                     exit(1);
                 }
-                MsgPacket msgPacket(tokens[2], tokens[4]);
+                // i want every token from 4 to the end
+                std::string content = "";
+                for (std::vector<std::string>::size_type i = 4; i < tokens.size(); ++i) {
+                    content += tokens[i];
+                    if (i != tokens.size() - 1) {
+                        content += " ";
+                    }
+                }
+                MsgPacket msgPacket(tokens[2], content);
                 return msgPacket;
             }
             else if(packetType == "BYE"){

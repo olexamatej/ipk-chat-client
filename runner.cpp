@@ -161,7 +161,8 @@ void Runner::packetReceiverTCP(Connection &connection){
                 client->send(bye_packet.serialize(connection));
                 exit(1);
             }
-            else{
+            else if(std::holds_alternative<MsgPacket>(recv_packet)){
+                    
                 std::cout << packet_data[0] << ": "<< packet_data[1] << std::endl;
             }
             

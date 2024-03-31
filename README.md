@@ -6,7 +6,6 @@ CHECK FOR SIGSEGV IN RECEIVED MESSAGES
 
 add memory freeing on exit (mby its needed only in UDP)
 
-Check if multiple clients on server work - Fix message receiving 
 
 
 check if received messages are correct

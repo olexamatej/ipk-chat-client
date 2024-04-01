@@ -19,6 +19,5 @@ int main(int argc, char *argv[]) {
     // Run the program
     Runner(argParser).run();
 
-
     return 0;
 }

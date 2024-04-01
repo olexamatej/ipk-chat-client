@@ -32,6 +32,7 @@ Runner::~Runner(){
 
 
 
+
 void Runner::inputScanner(Connection &connection){
     std::string line;
     //Scans for input, parses it and adds it to Q
@@ -39,6 +40,10 @@ void Runner::inputScanner(Connection &connection){
         while (std::getline(std::cin, line)) {
             Input userInput;
             userInput.getNewInput(line);
+            
+            if(connection.exit_flag != -1){
+                return;
+            }
             
             std::lock_guard<std::mutex> lock(queue_mutex);
         
@@ -58,6 +63,7 @@ void Runner::inputScanner(Connection &connection){
             queue_cond_var.notify_one(); 
         }
         std::cerr << "ERR: End of input\n";
+        connection.exit_flag = 1;
         ByePacket byePacket;
         client->send(byePacket.serialize(connection));
         return;
@@ -85,6 +91,9 @@ void Runner::inputScanner(Connection &connection){
         std::cerr << "ERR: End of input\n";
         ByePacket byePacket;
         client->send(byePacket.serialize(connection));
+        connection.exit_flag = 1;
+
+        //TODO END
         return;
     }
 }
@@ -120,6 +129,7 @@ void Runner::packetSenderTCP(Connection &connection){
 
 //receiver for TCP
 void Runner::packetReceiverTCP(Connection &connection){
+
          while(1) {
             std::string reply = client->receive();
             //print message that was sent
@@ -182,12 +192,22 @@ void Runner::packetReceiverTCP(Connection &connection){
 //packet sender for udp
 void Runner::packetSender(Connection &connection) {
         while(1) {
-            std::unique_lock<std::mutex> lock(queue_mutex);
-            queue_cond_var.wait(lock, [&] { return !input_packet_queue.empty(); });
-            if(input_packet_queue.empty()){
-                continue;
+            if(connection.exit_flag != -1){
+                return;
             }
-        
+            std::unique_lock<std::mutex> lock(queue_mutex);
+
+            // Blocking wait with timeout
+            if (!queue_cond_var.wait_for(lock, std::chrono::milliseconds(100), [&] { return !input_packet_queue.empty() || connection.exit_flag != -1; })) {
+                continue; // Continue to next iteration of the loop
+            }
+
+            // Check exit flag after waiting
+            if (connection.exit_flag != -1 || input_packet_queue.empty()) {
+                return;
+            }
+            
+
             //get the first packet from the queue and call .serialize
             send_packet = input_packet_queue.front();
 
@@ -213,14 +233,19 @@ void Runner::packetSender(Connection &connection) {
             std::cerr << "Failed to send message after " << this->retries << " attempts. Exiting...\n";
             exit(1);
         }
+
     }
 
 //UDP message receiver
 void Runner::packetReceiver(Connection &connection) {
-
     while (1) {
+        if(connection.exit_flag != -1){
+            return;
+        }
         std::string reply = client->receive();
-
+        if(reply == ""){
+            continue;
+        }
         std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
 
         if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
@@ -268,7 +293,7 @@ void Runner::packetReceiver(Connection &connection) {
             client->send(bye_packet.serialize(connection));
             //TODO fix
             std::cerr << "ERR FROM " << packet_data[0] << ": " << packet_data[1] << std::endl;
-            exit(1);
+            connection.exit_flag = 1;
 
         }
         //imaginary packet - invalid
@@ -291,9 +316,8 @@ void Runner::packetReceiver(Connection &connection) {
             client->send(error_packet.serialize(connection));
             std::cerr << "ERR: Invalid packet received" << std::endl;
             ByePacket bye_packet;
-            sleep(1);
             client->send(bye_packet.serialize(connection));
-            exit(1);
+            connection.exit_flag = 1;
            }
         else if (std::holds_alternative<MsgPacket>(recv_packet)){
             std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
@@ -310,6 +334,7 @@ void Runner::packetReceiver(Connection &connection) {
             std::unique_lock<std::mutex> lock(reply_mutex);
             reply_cond_var.notify_one();
         }
+   
     }
 }
 
@@ -317,30 +342,33 @@ Connection connection;
 
 //handling sigint
 void handle_sigint(int) {
-    ByePacket byePacket;
 
-    std::string serialized_byePacket = byePacket.serialize(connection);
-
-    Runner::client->send(serialized_byePacket);
-
-    exit(0);
 }
+
+std::atomic<bool> handled(false);
 
 
 void Runner::run(){
-    connection = Connection(this->ip_address, this->port, this->protocol);
+
+    connection.ip_address = this->ip_address;
+    connection.port = this->port;
+    connection.protocol = this->protocol;
 
     // std::cout << "Connected \n";
     
     signal(SIGINT, handle_sigint);
 
+   
      //thread for reading stdin, parsing them and sending them to other thread
-     std::jthread inputThread([&](){
+     std::thread inputThread([&](){
+        //get self pthread id
         inputScanner(connection);
     });
 
     //thread for sending messages to server
-    std::jthread sendThread([&]() {
+    std::thread sendThread([&]() {
+        //get self pthread id
+
         //while first thread is running, this thread will be waiting for input
         if(connection.protocol == Connection::Protocol::UDP){
             packetSender(connection);
@@ -358,4 +386,33 @@ void Runner::run(){
             packetReceiverTCP(connection);
         }
     });
+
+    std::mutex exit_flag_mutex;  // Define the mutex
+
+    auto monitorExitFlag = [&]() {
+        while (true) {
+            // Sleep for a short duration to prevent busy waiting
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            // Check exit_flag in a thread-safe manner
+            int exit_flag;
+            {
+                std::lock_guard<std::mutex> lock(exit_flag_mutex);
+                exit_flag = connection.exit_flag;
+            }
+
+            // If exit_flag is not -1, notify the condition variable
+            if (exit_flag != -1) {
+                queue_cond_var.notify_all();
+                return;
+            }
+        }
+    };
+    // pthread_join(inputThread.native_handle(), NULL);
+    inputThread.join();
+    
+    sendThread.join();
+    receiveThread.join();
+
+
 }

@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <cstdint>
+#include <atomic>
 
 
 // Class to store the connection details
@@ -29,6 +30,7 @@ class Connection {
         Connection(std::string ip_address, std::string port, Protocol protocol);
         // Function to clean auth data
         void clearAfterAuth();
+        std::atomic<int> exit_flag = -1;
 };
 
 

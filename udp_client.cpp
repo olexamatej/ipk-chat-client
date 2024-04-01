@@ -37,6 +37,13 @@ void UDPClient::connect() {
         exit(1);
     }
 
+    struct timeval tv;
+    tv.tv_sec = 1; // Timeout in seconds
+    tv.tv_usec = 0;
+    if (setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
+        perror("setsockopt");
+    }
+
     sockaddr_in sendAddr;
 
     struct sockaddr_in *ipv4 = (struct sockaddr_in *)server_info->ai_addr;
@@ -75,10 +82,18 @@ std::string UDPClient::receive() {
     sockaddr_in senderAddr;
     socklen_t senderAddrLen = sizeof(senderAddr);
 
+     // Set up a timeout for recvfrom
+
+
     ssize_t bytes_received = recvfrom(_socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&senderAddr, &senderAddrLen);
     if (bytes_received == -1) {
-        perror("recv");
-        return ""; // Return empty string upon error
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            // Timeout occurred
+            return ""; // Return empty string to indicate no message received within the timeout
+        } else {
+            perror("recv");
+            return ""; // Return empty string upon error
+        }
     }
 
     // Update sendAddr with sender's address and port

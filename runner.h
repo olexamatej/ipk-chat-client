@@ -17,6 +17,9 @@
 
 class Runner {
     public:
+        
+        Connection connection;
+        Runner(){};
         Runner(ArgumentParser argParser);
         ~Runner();
         void run();

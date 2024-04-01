@@ -5,6 +5,7 @@
 #include <set>
 #include <map>
 #include <cstdint>
+#include <atomic>
 
 
 class Connection {
@@ -25,6 +26,7 @@ class Connection {
         Protocol protocol;
         Connection(std::string ip_address, std::string port, Protocol protocol);
         void clearAfterAuth();
+        std::atomic<int> exit_flag = -1;
 };
 
 

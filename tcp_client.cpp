@@ -1,5 +1,5 @@
 #include "tcp_client.h"
-
+#include <fcntl.h> // for fcntl
 //creating connection
 TCPClient::TCPClient(std::string ip_address, std::string port) {
     this->ip_address = ip_address;
@@ -32,11 +32,23 @@ void TCPClient::connect() {
         perror("socket");
         exit(1);
     }
-    //creating connection
-    if (::connect(_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
-        close(_socket);
-        perror("connect");
+
+    int flags = fcntl(_socket, F_GETFL, 0);
+    if (flags == -1) {
+        perror("fcntl");
         exit(1);
+    }
+    if (fcntl(_socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+        perror("fcntl");
+        exit(1);
+    }
+    //creating connection
+        if (::connect(_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
+        if (errno != EINPROGRESS) {
+            perror("connect");
+            close(_socket);
+            exit(1);
+        }
     }
 
     freeaddrinfo(servinfo);
@@ -53,11 +65,11 @@ void TCPClient::send(std::string message) {
 std::string TCPClient::receive(){
     char buffer[1024];
     ssize_t bytes_received = recv(_socket, buffer, sizeof(buffer), 0);
-    if (bytes_received == -1) {
-        perror("recv");
-        return "";
-    } else if (bytes_received == 0) {
-        // std::cout << "Connection closed by " << ip_address << ":" << port << std::endl;
+        if (bytes_received == -1) {
+            if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                perror("recv");
+            }
+        // Return empty string to indicate no data available
         return "";
     }
     // std::cout << "Received " << bytes_received << " bytes from " << ip_address << ":" << port << std::endl;

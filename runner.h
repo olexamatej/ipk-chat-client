@@ -35,7 +35,6 @@ class Runner {
 
 
         std::mutex queue_mutex;
-        std::condition_variable queue_cond_var;
         std::condition_variable reply_cond_var;
         std::mutex reply_mutex;
         std::variant<PACKET_TYPE> send_packet = NullPacket();

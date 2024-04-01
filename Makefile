@@ -33,4 +33,4 @@ clean:
 
 run:
 	make
-	./ipk24chat-client -t udp -s 127.0.0.1
+	./ipk24chat-client -t tcp -s 127.0.0.1

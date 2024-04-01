@@ -332,10 +332,9 @@ void Runner::packetReceiver(Connection &connection) {
 }
 
 
-// void handle_sigint(int) {
-//     ByePacket byePacket;
+void handle_sigint(int) {
 
-// }
+}
 
 std::atomic<bool> handled(false);
 

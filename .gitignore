@@ -11,3 +11,8 @@ testo.py
 UDPTranslator.py
 UDPMessages.py
 server.py
+*.pyc
+__pycache__/UDPTranslator.cpython-312.pyc
+__pycache__/UDPMessages.cpython-312.pyc
+__pycache__/UDPTranslator.cpython-312.pyc
+__pycache__/UDPMessages.cpython-312.pyc

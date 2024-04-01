@@ -63,7 +63,7 @@ void TCPClient::send(std::string message) {
 
 //receive message
 std::string TCPClient::receive(){
-    char buffer[1024];
+    char buffer[2000];
     ssize_t bytes_received = recv(_socket, buffer, sizeof(buffer), 0);
         if (bytes_received == -1) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {

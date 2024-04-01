@@ -64,9 +64,9 @@ void Runner::inputScanner(Connection &connection){
             queue_cond_var.notify_one(); 
         }
         std::cerr << "ERR: End of input\n";
-        connection.exit_flag = 1;
-        ByePacket byePacket;
-        client->send(byePacket.serialize(connection));
+        connection.exit_flag = 0;
+        endUDPConnection(connection);
+
         return;
     }
     else if(connection.protocol == Connection::Protocol::TCP){
@@ -91,12 +91,11 @@ void Runner::inputScanner(Connection &connection){
 
             queue_cond_var.notify_one(); 
         }
-        std::cerr << "ERR: End of input\n";
-        ByePacket byePacket;
-        client->send(byePacket.serialize(connection));
-        connection.exit_flag = 1;
         
-        //TODO END
+        std::cerr << "ERR: End of input\n";
+    
+        connection.exit_flag = 0;
+        
         return;
     }
 }
@@ -206,6 +205,7 @@ void Runner::packetReceiverTCP(Connection &connection){
 
 void Runner::endUDPConnection(Connection &connection){
     ByePacket byePacket;
+
     client->send(byePacket.serialize(connection));
     //
     
@@ -216,8 +216,11 @@ void Runner::endUDPConnection(Connection &connection){
 
         //if reply received is confirm, check id
         std::string reply = client->receive();
-
+        if(reply == ""){
+            continue;
+        }
         std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+
 
         //if recv_packet is confirm packet, then check id
         if(std::holds_alternative<ConfirmPacket>(recv_packet)){
@@ -240,7 +243,7 @@ void Runner::endUDPConnection(Connection &connection){
             break;
         }
     }
-    connection.exit_flag = 1;
+    connection.exit_flag = 0;
 }
 
 

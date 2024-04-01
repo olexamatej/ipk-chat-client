@@ -10,4 +10,4 @@ Všetky zmeny sú ukladané v tomto súbore
 
 ### Obmedzenia implementácie
 
-- 
+- Ukončenie pomocou SIGINT neukončuje "gracefully"

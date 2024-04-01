@@ -42,7 +42,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         case CommandType::JOIN:{
             //print all arguments
             if(arguments.size() != 2){
-                std::cout << "Invalid number of arguments" << std::endl;
+                std::cout << "ERR: Invalid number of arguments" << std::endl;
                 return NullPacket();
             }
             JoinPacket joinPacket(arguments, display_name);
@@ -93,6 +93,7 @@ std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
         }
         break;
     }
+    exit(1);
 }
 
 //TODO: implement this

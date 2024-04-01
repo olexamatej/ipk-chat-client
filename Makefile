@@ -2,7 +2,7 @@
 CC := g++
 LDFLAGS=-pthread
 # Compiler flags
-CFLAGS := -Wall -Wextra -std=c++20 -g
+CFLAGS := -std=c++20 -g
 
 # Source files
 SRCS := inputParser.cpp tcp_client.cpp main.cpp udp_client.cpp packet.cpp connection.cpp runner.cpp argumentParser.cpp client.cpp
@@ -33,4 +33,5 @@ clean:
 
 run:
 	make
-	./ipk24chat-client -t tcp -s 127.0.0.1 -d 1000
+	./ipk24chat-client -t udp -s 127.0.0.1 -d 1000
+	

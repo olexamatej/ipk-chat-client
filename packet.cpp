@@ -103,11 +103,11 @@ JoinPacket::JoinPacket(const std::vector<std::string>& arguments, const std::str
 //checking if join has legal arguments
 bool JoinPacket::LegalCheck(){
     if(this->dname.length() > 20){
-        std::cout << "Display name is too long" << std::endl;
+        std::cout << "ERR: Display name is too long" << std::endl;
         return false;
     }
     if(this->id.length() > 20){
-        std::cout << "ID is too long" << std::endl;
+        std::cout << "ERR: ID is too long" << std::endl;
         return false;
     }
     return true;
@@ -117,7 +117,7 @@ bool JoinPacket::LegalCheck(){
 std::string JoinPacket::serialize(Connection &connection) {
     if(this->dname == ""){
         //TODO throw exception
-        std::cout << "Dname is empty" << std::endl;
+        std::cout << "ERR: Dname is empty" << std::endl;
         exit(1);
     }
 
@@ -155,39 +155,39 @@ std::string JoinPacket::serialize(Connection &connection) {
 
         return packet_str;
     }
-    std::cout<< "Invalid protocol" << std::endl;
+    std::cerr<< "ERR: Invalid protocol" << std::endl;
     exit(1);
 }
 
 //Checking if auth has legal arguments
 bool AuthPacket::LegalCheck(){
     if(this->dname.length() > 20){
-        std::cout << "Display name is too long" << std::endl;
+        std::cerr << "ERR: Display name is too long" << std::endl;
         return false;
     }
     for(char c : this->dname){
         if(!isalnum(c) && c != '-'){
-            std::cout << "ID has invalid characters" << std::endl;
+            std::cerr << "ERR: ID has invalid characters" << std::endl;
             return false;
         }
     }
     if(this->id.length() > 20){
-        std::cout << "ID is too long" << std::endl;
+        std::cerr << "ERR: ID is too long" << std::endl;
         return false;
     }
     for(char c : this->id){
         if(!isalnum(c) && c != '-'){
-            std::cout << "ID has invalid characters" << std::endl;
+            std::cerr << "ERR: ID has invalid characters" << std::endl;
             return false;
         }
     }
     if(this->secret.length() > 128){
-        std::cout << "Secret is too long" << std::endl;
+        std::cerr << "ERR: Secret is too long" << std::endl;
         return false;
     }
     for(char c : this->secret){
         if(!isalnum(c) && c != '-'){
-            std::cout << "ID has invalid characters" << std::endl;
+            std::cerr << "ERR: ID has invalid characters" << std::endl;
             return false;
         }
     }
@@ -258,7 +258,7 @@ std::string AuthPacket::serialize(Connection &connection) {
 
         return packet_str;
     }
-    std::cout<< "Invalid protocol" << std::endl;
+    std::cerr<< "ERR: Invalid protocol" << std::endl;
     exit(1);
 
 }

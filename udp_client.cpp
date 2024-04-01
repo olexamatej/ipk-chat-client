@@ -55,8 +55,6 @@ void UDPClient::connect() {
     sendAddr.sin_addr.s_addr = ipv4->sin_addr.s_addr;
     sendAddr.sin_port = htons(std::stoi(port));
 
-
-
     this->serverAddr = sendAddr;
 
     sockaddr_in recvAddress;
@@ -89,7 +87,7 @@ void UDPClient::send(std::string message) {
 }
 
 std::string UDPClient::receive() {
-    char buffer[1024];
+    char buffer[2000];
     sockaddr_in senderAddr;
     socklen_t senderAddrLen = sizeof(senderAddr);
 

@@ -86,7 +86,7 @@ Týmto spôsobom boli kontrolované a odskúšané prípady
 - `Príjmanie správy typu error`
 - `Posielanie správy typu error`
 
-Pre testovanie boli taktiež využité aj študentské testy[6], ale je dôležité podotknúť že neboli hlavným spôsobom testovania.
+Pre testovanie boli taktiež využité aj študentské testy[6], ale je dôležité podotknúť že neboli hlavným spôsobom testovania. Okrem iného boli využité aj pomôcky v Stubs [7].
 
 ## Sources
 [1] [IPK24Chat Protocol](https://git.fit.vutbr.cz/NESFIT/IPK-Projects-2024/src/branch/master#developer-environment-and-virtualization-remarks)
@@ -95,6 +95,7 @@ Pre testovanie boli taktiež využité aj študentské testy[6], ale je dôleži
 [4] [Wireshark](https://www.wireshark.org/)  
 [5] [Wireshark plugin](https://git.fit.vutbr.cz/NESFIT/IPK-Projects-2024/src/branch/master/Project%201/resources)  
 [6] [Testy](https://git.fit.vutbr.cz/xhobza03/ipk-client-test-server)
+[7] [Stubs](https://git.fit.vutbr.cz/NESFIT/IPK-Projects-2024/src/branch/master/Stubs/cpp)
 
 
 

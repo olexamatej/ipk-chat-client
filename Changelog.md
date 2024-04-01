@@ -1,17 +1,13 @@
-#TODO
+# Changelog
 
-Check if multiple clients on server work - Fix message receiving 
-create another constructor for MSG, or find other way to check if received messages are correct - you made legalCheck, just dont exit on invalid
-CHECK FOR SIGSEGV IN RECEIVED MESSAGES
+Všetky zmeny sú ukladané v tomto súbore
 
-add memory freeing on exit (mby its needed only in UDP)
+## [1.0.0] - 1.4.2024
 
+### Pridané
 
+- Vypracovanie projektu podľa zadania
 
-check if received messages are correct
-wait for confirm after ctrl c 
-make what happens if message is not confirmed at all
+### Obmedzenia implementácie
 
-fix getting reply without sending join
-
-Ignore second coming of message, this should have high prio
+- 

@@ -110,7 +110,12 @@ class NullPacket : public Packet {
 class ByePacket : public Packet {
     public:
         std::string serialize(Connection &connection);
-        std::vector <std::string> getData() {return {};}
+        std::vector <std::string> getData() {
+            //return this->messageID in a vector of strings
+            return {std::to_string(this->messageID)};
+        }
+    protected:
+        uint16_t messageID;
 };
 
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection &connection);

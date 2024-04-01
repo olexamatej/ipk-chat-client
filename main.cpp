@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     ArgumentParser argParser(argc, argv);
 
     // Run the program
-    Runner(argParser).run();
+    int retcode = Runner(argParser).run();
 
-    return 0;
+    return retcode;
 }

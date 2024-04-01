@@ -534,9 +534,10 @@ std::string ByePacket::serialize(Connection &connection) {
         std::vector<uint8_t> packet;
         //first byte is 0xFF, next 2 bytes are message ID
         packet.push_back(0xFF);
-        uint16_t id_num = connection.message_id++;
-        packet.push_back(id_num >> 8);  // High byte
-        packet.push_back(id_num & 0xFF);  // Low byte
+        this->messageID = connection.message_id++;
+        
+        packet.push_back(this->messageID >> 8);  // High byte
+        packet.push_back(this->messageID & 0xFF);  // Low byte
 
         std::string packet_str(packet.begin(), packet.end());
         return packet_str;

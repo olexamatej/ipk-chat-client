@@ -12,6 +12,7 @@ class UDPClient : public Client{
     public:
         UDPClient();
         UDPClient(const std::string ip_address,const std::string port);
+        void receiveTimeout(int milliseconds);
         void send(std::string message);
         std::string receive();
         void connect();

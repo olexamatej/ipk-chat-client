@@ -17,6 +17,7 @@ class TCPClient : public Client{
         void send(std::string message);
         void connect();
         std::string receive();
+        void receiveTimeout(int){};
     private:
         int _socket;
         std::string ip_address;

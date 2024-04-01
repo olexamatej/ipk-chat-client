@@ -25,6 +25,8 @@ class Connection {
         std::string id;
         std::string secret;
         uint16_t message_id;
+        int timeout;
+        int retries;
         Protocol protocol;
         // Constructor to set the connection details
         Connection(std::string ip_address, std::string port, Protocol protocol);

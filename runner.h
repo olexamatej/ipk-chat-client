@@ -22,7 +22,7 @@ class Runner {
         Runner(){};
         Runner(ArgumentParser argParser);
         ~Runner();
-        void run();
+        int run();
         void inputScanner(Connection &connection);
         void packetSender(Connection &connection);
         void packetSenderTCP(Connection &connection);
@@ -32,13 +32,15 @@ class Runner {
         void processAuthJoin(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);
         void handleReplyPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);
         void handleConfirmPacket(Connection &connection, std::string &reply, std::variant<RECV_PACKET_TYPE> recv_packet);
-
-
+        
+        void endUDPConnection(Connection &connection);   
+        
         std::mutex queue_mutex;
         std::condition_variable reply_cond_var;
         std::mutex reply_mutex;
         std::variant<PACKET_TYPE> send_packet = NullPacket();
         std::queue<std::variant<PACKET_TYPE>> input_packet_queue;
+
 
         static Client *client;
         std::atomic<bool> replied;

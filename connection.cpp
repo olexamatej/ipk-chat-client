@@ -8,6 +8,8 @@ Connection::Connection(std::string ip_address, std::string port, Protocol protoc
     this->secret = "";
     this->protocol = protocol;
     this->message_id = 0;
+    this->timeout = 250;
+    this->retries = 3;
 }
 
 void Connection::clearAfterAuth(){

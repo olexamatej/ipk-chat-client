@@ -71,6 +71,15 @@ void UDPClient::connect() {
     }
 }
 
+void UDPClient::receiveTimeout(int milliseconds) {
+    struct timeval tv;
+    tv.tv_sec = milliseconds / 1000; // convert milliseconds to seconds
+    tv.tv_usec = (milliseconds % 1000) * 1000; // convert the remaining milliseconds to microseconds
+    if (setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)) < 0) {
+        perror("setsockopt");
+    }
+}
+
 void UDPClient::send(std::string message) {
     //print ip address
     ssize_t bytes_sent = sendto(this->_socket, message.c_str(), message.size(), 0, (struct sockaddr*)&this->serverAddr, sizeof(this->serverAddr));

@@ -9,5 +9,6 @@ public:
     virtual void send(std::string) = 0;
     virtual std::string receive() = 0;
     virtual void connect() = 0;
+    virtual void receiveTimeout(int) = 0;
 };
 #endif

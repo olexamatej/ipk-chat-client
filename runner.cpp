@@ -136,6 +136,8 @@ void Runner::packetSenderTCP(Connection &connection){
         }
 }
 
+
+
 //receiver for TCP
 void Runner::packetReceiverTCP(Connection &connection){
 
@@ -201,6 +203,46 @@ void Runner::packetReceiverTCP(Connection &connection){
             reply_cond_var.notify_one();
         }
 }
+
+void Runner::endUDPConnection(Connection &connection){
+    ByePacket byePacket;
+    client->send(byePacket.serialize(connection));
+    //
+    
+    client->receiveTimeout(connection.timeout);
+
+    for(int i = 0; i < this->retries; i++){
+        client->send(byePacket.serialize(connection));
+
+        //if reply received is confirm, check id
+        std::string reply = client->receive();
+
+        std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
+
+        //if recv_packet is confirm packet, then check id
+        if(std::holds_alternative<ConfirmPacket>(recv_packet)){
+            ConfirmPacket confirm_packet = std::get<ConfirmPacket>(recv_packet);
+            std::vector<std::string> packet_data = confirm_packet.getData();
+            uint16_t messageID = std::stoi(packet_data[0]);
+            //if messageID is not in message_id_map, then continue
+            if(connection.message_id_map[messageID] == false){
+                connection.message_id_map[messageID] = true;
+            }
+            //if every id is confirmed, then break
+            if(std::all_of(connection.message_id_map.begin(), connection.message_id_map.end(), [](auto &p) { return p.second == true; })){
+                break;
+            }
+        }
+        else if(std::holds_alternative<ErrorPacket>(recv_packet)){
+            std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
+            std::cerr << "ERR FROM " << packet_data[0] << ": " << packet_data[1] << std::endl;
+            connection.exit_flag = 1;
+            break;
+        }
+    }
+    connection.exit_flag = 1;
+}
+
 
 //packet sender for udp
 void Runner::packetSender(Connection &connection) {
@@ -269,10 +311,7 @@ void Runner::packetReceiver(Connection &connection) {
                 
                 ReplyPacket reply_packet = std::get<ReplyPacket>(recv_packet);
                 std::vector<std::string> packet_data = reply_packet.getData();
-                //if reply is already confirmed, then continue
-                // if (connection.message_id_map[std::stoi(packet_data[2])] == true) {
-                //     continue;
-                // }
+   
                 if (packet_data[0] == "0") {
                     std::cerr << "Failure: " << packet_data[1] << "\n";
                     connection.clearAfterAuth();
@@ -331,8 +370,8 @@ void Runner::packetReceiver(Connection &connection) {
             ErrorPacket error_packet("Invalid packet received", connection.display_name);
             client->send(error_packet.serialize(connection));
             std::cerr << "ERR: Invalid packet received" << std::endl;
-            ByePacket bye_packet;
-            client->send(bye_packet.serialize(connection));
+            endUDPConnection(connection);
+
             connection.exit_flag = 1;
            }
         else if (std::holds_alternative<MsgPacket>(recv_packet)){
@@ -366,19 +405,18 @@ std::mutex exit_flag_mutex;
 
 //handling sigint
 void handle_sigint(int sig) {
-    std::lock_guard<std::mutex> lock(exit_flag_mutex);
-    connection.exit_flag = 0; // or any number you prefer
-    queue_cond_var.notify_all();
-    std::cerr << "SIGINT received, exiting...\n";
+
+    // delete(Runner::client);
+    exit(0);
 }
 
-
-
-void Runner::run(){
+int Runner::run(){
 
     connection.ip_address = this->ip_address;
     connection.port = this->port;
     connection.protocol = this->protocol;
+    connection.timeout = this->timeout;
+    connection.retries = this->retries;
 
     // std::cout << "Connected \n";
     
@@ -440,5 +478,6 @@ void Runner::run(){
     sendThread.join();
     receiveThread.join();
 
+    return connection.exit_flag;
 
 }

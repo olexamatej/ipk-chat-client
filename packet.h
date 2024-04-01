@@ -9,9 +9,10 @@
 #include <string>
 #include "connection.h"
 
+// Define the types of packets that can be received
 #define RECV_PACKET_TYPE MsgPacket, ErrorPacket, ReplyPacket, ConfirmPacket, ByePacket, NullPacket
 
-
+// Abstract class for the packet
 class Packet {
     public:
         virtual std::string serialize(Connection&){return "";};
@@ -19,8 +20,10 @@ class Packet {
         std::string input;
 };
 
+// Class for packet of message type
 class MsgPacket : public Packet {
     public:
+    //constructor for different purposes
         MsgPacket(const std::string& dname, const std::string& content);
         MsgPacket(const std::vector<uint8_t> data);
         using Packet::serialize;
@@ -33,6 +36,7 @@ class MsgPacket : public Packet {
         uint16_t messageID;
 };
 
+//Class for packet of join type
 class JoinPacket : public Packet {
     public:
         JoinPacket(const std::vector<std::string>& arguments, const std::string& dname);
@@ -43,7 +47,7 @@ class JoinPacket : public Packet {
         std::string id;
 };
 
-
+//Class for packet of auth type
 class AuthPacket : public Packet {
     public:
         AuthPacket(const std::vector<std::string>& arguments);
@@ -54,6 +58,7 @@ class AuthPacket : public Packet {
         std::string secret;
         bool LegalCheck();
 };
+//Class for packet of Error type
 
 class ErrorPacket : public Packet {
     public:
@@ -68,6 +73,8 @@ class ErrorPacket : public Packet {
         uint16_t messageID;
 };
 
+//Class for packet of Reply type
+
 class ReplyPacket : public Packet {
     public:
         ReplyPacket(const std::vector<std::string> data);
@@ -79,6 +86,7 @@ class ReplyPacket : public Packet {
         uint16_t messageID;
 };
 
+//Class for packet of Confirm type
 class ConfirmPacket : public Packet {
     public:
         ConfirmPacket(const std::vector<uint8_t> data);
@@ -89,12 +97,15 @@ class ConfirmPacket : public Packet {
         std::string refID;
 };
 
+//Class for packet of Null type
 class NullPacket : public Packet {
     public:
         std::string serialize(Connection&){return "";};
         std::vector <std::string> getData() {return {};}
         bool rename = false;
 };
+
+//Class for packet of Bye type
 
 class ByePacket : public Packet {
     public:

@@ -12,6 +12,7 @@ UDPClient::UDPClient(std::string ip_address, std::string port){
     this->port = port;
     connect();
 }
+//creating socket
 
 void UDPClient::connect() {
     //resolve addrinfo
@@ -39,6 +40,7 @@ void UDPClient::connect() {
 
     sockaddr_in sendAddr;
 
+    //resolving UDP dynamic port
     struct sockaddr_in *ipv4 = (struct sockaddr_in *)server_info->ai_addr;
     inet_pton(AF_INET, ip_address.c_str(), &(ipv4->sin_addr)); 
 
@@ -87,13 +89,3 @@ std::string UDPClient::receive() {
     return std::string(buffer, bytes_received);
 }
 
-// int main() {
-
-//     std::string ip_address = "127.0.0.1";
-//     std::string port = "4567";
-    
-//     UDPClient client(ip_address, port);
-//     client.send("Mam rad vlaky\n");
-//     std::cout << client.receive() << std::endl;
-//     return 0;
-// }

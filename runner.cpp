@@ -34,6 +34,7 @@ Runner::~Runner(){
 
 void Runner::inputScanner(Connection &connection){
     std::string line;
+    //Scans for input, parses it and adds it to Q
     if(connection.protocol == Connection::Protocol::UDP){
         while (std::getline(std::cin, line)) {
             Input userInput;
@@ -51,8 +52,9 @@ void Runner::inputScanner(Connection &connection){
                 input_packet_queue.pop();
                 continue;
             }    
+            //sets message_id_map to false, waits for confirm in different thread
             connection.message_id_map[connection.message_id] = false;
-
+            //notifying send thread, so it can send parsed message
             queue_cond_var.notify_one(); 
         }
         std::cerr << "ERR: End of input\n";
@@ -76,18 +78,18 @@ void Runner::inputScanner(Connection &connection){
                 input_packet_queue.pop();
                 continue;
             }    
+            //notifying send thread, so it can send parsed message
 
             queue_cond_var.notify_one(); 
         }
         std::cerr << "ERR: End of input\n";
         ByePacket byePacket;
         client->send(byePacket.serialize(connection));
-        //TODO END
         return;
     }
 }
 
-
+//Packet sender for TCP variant
 void Runner::packetSenderTCP(Connection &connection){
            while(1) {
             std::unique_lock<std::mutex> lock(queue_mutex);
@@ -101,10 +103,10 @@ void Runner::packetSenderTCP(Connection &connection){
 
             std::string serialized_packet = "";
             std::visit([&](auto& p) { serialized_packet = p.serialize(connection); }, send_packet);
-
+            //serialize it
             input_packet_queue.pop();
             lock.unlock();
-            
+            //send packet
 
             client->send(serialized_packet);
 
@@ -116,7 +118,7 @@ void Runner::packetSenderTCP(Connection &connection){
         }
 }
 
-
+//receiver for TCP
 void Runner::packetReceiverTCP(Connection &connection){
          while(1) {
             std::string reply = client->receive();
@@ -130,6 +132,7 @@ void Runner::packetReceiverTCP(Connection &connection){
                     std::cerr  << "ERR: Invalid packet received, ending connection" << std::endl;
                     exit(1);
                 }                
+                //checks if it was success
                 if(packet_data[0] == "1"){
                     std::cerr << "Success: ";
                 } 
@@ -142,6 +145,7 @@ void Runner::packetReceiverTCP(Connection &connection){
 
                 std::cerr << packet_data[1] << std::endl;
             }
+            // 
             else if(std::holds_alternative<ErrorPacket>(recv_packet)){
                 //send bye packet and end
                 ByePacket bye_packet;
@@ -150,14 +154,14 @@ void Runner::packetReceiverTCP(Connection &connection){
                 std::cerr << "ERR FROM " << packet_data[0] << ": " << packet_data[1] << std::endl;
                 exit(1);
             }
-
+            //this is packet for invalid messages
             else if(std::holds_alternative<NullPacket>(recv_packet)){
+                
                 ErrorPacket error_packet("Invalid packet received", connection.display_name);
                 client->send(error_packet.serialize(connection));
 
                 std::cerr << "ERR: Invalid packet received" << std::endl;
                 ByePacket bye_packet;
-                sleep(1);
                 client->send(bye_packet.serialize(connection));
                 exit(1);
             }
@@ -165,13 +169,17 @@ void Runner::packetReceiverTCP(Connection &connection){
                     
                 std::cout << packet_data[0] << ": "<< packet_data[1] << std::endl;
             }
+            else{
+                std::cerr << "ERR: invalid message\r\n";
+                exit(1);
+            }
             
             std::unique_lock<std::mutex> lock(reply_mutex);
             reply_cond_var.notify_one();
         }
 }
 
-
+//packet sender for udp
 void Runner::packetSender(Connection &connection) {
         while(1) {
             std::unique_lock<std::mutex> lock(queue_mutex);
@@ -179,7 +187,7 @@ void Runner::packetSender(Connection &connection) {
             if(input_packet_queue.empty()){
                 continue;
             }
-
+        
             //get the first packet from the queue and call .serialize
             send_packet = input_packet_queue.front();
 
@@ -188,7 +196,7 @@ void Runner::packetSender(Connection &connection) {
 
             input_packet_queue.pop();
             lock.unlock();
-            
+            //attempts
         for (int attempt = 0; attempt < this->retries+1; ++attempt) {
                 client->send(serialized_packet);
                 std::unique_lock<std::mutex> reply_lock(reply_mutex);
@@ -207,6 +215,7 @@ void Runner::packetSender(Connection &connection) {
         }
     }
 
+//UDP message receiver
 void Runner::packetReceiver(Connection &connection) {
 
     while (1) {
@@ -215,8 +224,7 @@ void Runner::packetReceiver(Connection &connection) {
         std::variant<RECV_PACKET_TYPE> recv_packet = ReceiveParser(reply, connection);
 
         if (std::holds_alternative<AuthPacket>(send_packet) || std::holds_alternative<JoinPacket>(send_packet)) {
-
-
+            //after sending auth/join it will not exit this loop until it is either confirmed or timeout has passed
             replied.store(false);
             // processAuthJoin(connection, reply, recv_packet);
             if (std::holds_alternative<ReplyPacket>(recv_packet)) {
@@ -263,6 +271,7 @@ void Runner::packetReceiver(Connection &connection) {
             exit(1);
 
         }
+        //imaginary packet - invalid
         else if(std::holds_alternative<NullPacket>(recv_packet)){
 
             std::vector<uint8_t> data_bytes(reply.begin(), reply.end());\
@@ -287,8 +296,6 @@ void Runner::packetReceiver(Connection &connection) {
             exit(1);
            }
         else if (std::holds_alternative<MsgPacket>(recv_packet)){
-            //call the .getData() method of the packet and print the data
-            //TODO fix
             std::vector<std::string> packet_data = std::visit([&](auto& p) { return p.getData(); }, recv_packet);
             std::cout << packet_data[0] << ": " << packet_data[1] << std::endl;
             uint16_t messageID = std::stoi(packet_data[2]);
@@ -308,7 +315,7 @@ void Runner::packetReceiver(Connection &connection) {
 
 Connection connection;
 
-
+//handling sigint
 void handle_sigint(int) {
     ByePacket byePacket;
 
@@ -342,7 +349,7 @@ void Runner::run(){
             packetSenderTCP(connection);
         }
     });
-    
+    //thread for receiving messages from server
     std::jthread receiveThread([&]() {
         if(connection.protocol == Connection::Protocol::UDP){
             packetReceiver(connection);

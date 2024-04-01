@@ -13,8 +13,10 @@
 #include "runner.h"
 
 int main(int argc, char *argv[]) {
+    // Parse the arguments
     ArgumentParser argParser(argc, argv);
 
+    // Run the program
     Runner(argParser).run();
 
 

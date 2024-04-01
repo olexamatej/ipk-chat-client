@@ -2,8 +2,11 @@
 #define ARGUMENTPARSER_H
 
 #include "connection.h"
+
+// Class to parse the arguments
 class ArgumentParser{
     public:
+    // Constructor with default values set
         ArgumentParser(int argc, char *argv[]){
             this->argc = argc;
             this->argv = argv;

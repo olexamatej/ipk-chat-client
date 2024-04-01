@@ -1,7 +1,7 @@
 #include "inputParser.h"
 #include "packet.h"
 
-
+// Function to get the command type
 CommandType getCommandType(std::string line){
     if(line.find("/join",0) == 0){
         return CommandType::JOIN;
@@ -18,23 +18,26 @@ CommandType getCommandType(std::string line){
     return CommandType::ELSE;
 }
 
-
+// Function to parse the input
 std::variant<PACKET_TYPE> Input::parseInput(Connection &connection){
+    // get the command type
     CommandType type = getCommandType(this->line);
     std::vector<std::string> arguments;
+    // split the input into arguments
     std::istringstream iss(this->line);
-
+    // set the display name and id from the connection
     std::string display_name = connection.display_name;
     std::string id = connection.id;
+    // get the arguments
     for(std::string s; std::getline(iss, s, ' '); ) {
         arguments.push_back(s);
     }
 
-    // std::cout << "input is " << this->line << std::endl;
     if((display_name == "" || id == "") && type != CommandType::AUTH){
         // std::cerr << "ERR: Please authenticate first" << std::endl;
         return NullPacket();
     }
+    // switch on the command type
     switch(type){
         case CommandType::JOIN:{
             //print all arguments

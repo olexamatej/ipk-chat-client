@@ -2,6 +2,7 @@
 #define CLIENT_H
 #include <string>
 
+// Abstract class for the client
 class Client {
 public:
     virtual ~Client();

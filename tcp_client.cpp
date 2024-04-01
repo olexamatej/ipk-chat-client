@@ -1,6 +1,6 @@
 #include "tcp_client.h"
 
-
+//creating connection
 TCPClient::TCPClient(std::string ip_address, std::string port) {
     this->ip_address = ip_address;
     this->port = port;
@@ -21,7 +21,7 @@ void TCPClient::connect() {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = 0;
-    
+    //get ip from domain
     if ((status = getaddrinfo(ip_address.c_str(), port.c_str(), &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
         exit(1);
@@ -32,7 +32,7 @@ void TCPClient::connect() {
         perror("socket");
         exit(1);
     }
-    
+    //creating connection
     if (::connect(_socket, servinfo->ai_addr, servinfo->ai_addrlen) == -1) {
         close(_socket);
         perror("connect");
@@ -41,15 +41,15 @@ void TCPClient::connect() {
 
     freeaddrinfo(servinfo);
 }
-
+//send message
 void TCPClient::send(std::string message) {
     ssize_t bytes_sent = ::send(_socket, message.c_str(), message.size(), 0);
     if (bytes_sent == -1) {
         perror("send");
     }
-    // std::cout << "Sent " << bytes_sent << " bytes to " << ip_address << ":" << port << std::endl;
 }
 
+//receive message
 std::string TCPClient::receive(){
     char buffer[1024];
     ssize_t bytes_received = recv(_socket, buffer, sizeof(buffer), 0);

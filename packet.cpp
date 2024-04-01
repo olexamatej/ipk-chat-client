@@ -5,6 +5,7 @@ const std::string IS = " IS ";
 const std::string AS = " AS ";
 const std::string CRLF = "\r\n";
 
+
 MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
     if(dname == "" || content == ""){
         //TODO throw exception
@@ -15,6 +16,8 @@ MsgPacket::MsgPacket(const std::string& dname, const std::string& content) {
     this->content = content;
 }
 
+
+// Check if the message is legal
 bool MsgPacket::LegalCheck(){
     if(content.length() > 1400){
         std::cout << "Content is too long" << std::endl;
@@ -23,7 +26,7 @@ bool MsgPacket::LegalCheck(){
     return true;
 }
 
-
+//constructor used in UDP variant
 MsgPacket::MsgPacket(const std::vector<uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     //displayname until 0 byte
@@ -39,6 +42,7 @@ MsgPacket::MsgPacket(const std::vector<uint8_t> data){
 
 }
 
+//getting data from MsgPacket
 std::vector<std::string> MsgPacket::getData() {
     std::vector<std::string> data;
     data.push_back(dname);
@@ -47,6 +51,7 @@ std::vector<std::string> MsgPacket::getData() {
     return data;
 }
 
+//serializing message to be able to send it
 std::string MsgPacket::serialize(Connection &connection) {
     if(connection.protocol == Connection::Protocol::TCP){
         return "MSG FROM" + SP + this->dname + IS + this->content + CRLF;
@@ -95,6 +100,7 @@ JoinPacket::JoinPacket(const std::vector<std::string>& arguments, const std::str
     this->dname = dname;
 }
 
+//checking if join has legal arguments
 bool JoinPacket::LegalCheck(){
     if(this->dname.length() > 20){
         std::cout << "Display name is too long" << std::endl;
@@ -107,6 +113,7 @@ bool JoinPacket::LegalCheck(){
     return true;
 }
 
+//Serializing message before sendign it
 std::string JoinPacket::serialize(Connection &connection) {
     if(this->dname == ""){
         //TODO throw exception
@@ -152,6 +159,7 @@ std::string JoinPacket::serialize(Connection &connection) {
     exit(1);
 }
 
+//Checking if auth has legal arguments
 bool AuthPacket::LegalCheck(){
     if(this->dname.length() > 20){
         std::cout << "Display name is too long" << std::endl;
@@ -187,6 +195,7 @@ bool AuthPacket::LegalCheck(){
     return true;
 }
 
+//Constructor for AuthPacket
 AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
     
     this->id = arguments[1];
@@ -194,6 +203,7 @@ AuthPacket::AuthPacket(const std::vector<std::string>& arguments){
     this->secret = arguments[2];
 }
 
+//Getting data from auth
 std::vector<std::string> AuthPacket::getData() {
     std::vector<std::string> data;
     data.push_back(id);
@@ -202,6 +212,7 @@ std::vector<std::string> AuthPacket::getData() {
     return data;
 }
 
+//serializing before sending
 std::string AuthPacket::serialize(Connection &connection) {
     if(connection.protocol == Connection::Protocol::TCP){
         return "AUTH" + SP + id + AS + dname + " USING " + secret + CRLF;
@@ -262,7 +273,7 @@ ErrorPacket::ErrorPacket(std::string content, std::string dname){
     this->dname = dname;
 }
 
-
+//constructor for udp variant
 ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     //displayname until 0 byte
@@ -277,6 +288,7 @@ ErrorPacket::ErrorPacket(const std::vector<uint8_t> data){
     }
 }
 
+//serialize before send
 std::string ErrorPacket::serialize(Connection &connection){
     if(connection.protocol == Connection::Protocol::TCP){
         return "ERR FROM" + SP + this->dname + IS + this->content + CRLF;
@@ -311,6 +323,7 @@ std::string ErrorPacket::serialize(Connection &connection){
 
 }
 
+//constructor for reply packet
 ReplyPacket::ReplyPacket(const std::vector <uint8_t> data){
     this->messageID = (data[1] << 8) + data[2];
     this->success = data[3];
@@ -323,11 +336,10 @@ ConfirmPacket::ConfirmPacket(const std::vector<uint8_t> data){
     this->refID = std::to_string((data[1] << 8) + data[2]);
 }
 
-//TODO check this, if the serialize is not the same as in the example
 ConfirmPacket::ConfirmPacket(uint16_t messageID){
     this->refID = std::to_string(messageID);
 }
-
+//serialize before sending
 std::string ConfirmPacket::serialize(Connection&) {
     std::vector <uint8_t> packet;
     packet.push_back(0x00);
@@ -340,6 +352,7 @@ std::string ConfirmPacket::serialize(Connection&) {
     return packet_str;    
 }
 
+//getting data from confirm packet
 std::vector<std::string> ConfirmPacket::getData() {
     std::vector<std::string> data;
     data.push_back(refID);
@@ -348,7 +361,7 @@ std::vector<std::string> ConfirmPacket::getData() {
 }
 
 
-
+//Reply packet constructor
 ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
         if(data.size() < 4){
             //TODO throw exception
@@ -359,7 +372,6 @@ ReplyPacket::ReplyPacket(const std::vector<std::string> data) {
             std::cerr << "Invalid format of reply" << std::endl;
             exit(1);
         } 
-
         if(data[1] == "OK"){
             this->success = true;
         } else if(data[1] == "NOK"){
@@ -398,10 +410,10 @@ std::vector<std::string> ErrorPacket::getData() {
     return data;
 }
 
-
-
+//parser for received messages, returns one of types from std::variant
 std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection &connection){
     if(connection.protocol == Connection::Protocol::TCP){
+        // Split the data into tokens
         std::istringstream iss(data);
         std::vector<std::string> tokens;
         std::string token;
@@ -410,7 +422,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
         }
         if (!tokens.empty()) {
             std::string packetType = tokens[0];
-        
+            //if first token is REPLY, create return packet and return it
             if(packetType == "REPLY"){
                 if(tokens.size() < 4){
                     //TODO throw exception
@@ -420,6 +432,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 ReplyPacket reply_packet(tokens);
                 return reply_packet;
             }
+            //if first token is ERR, create error packet and return it
             else if(packetType == "ERR"){
                 if(tokens.size() < 4){
                     //TODO throw exception
@@ -429,6 +442,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 ErrorPacket error_packet(tokens);
                 return error_packet;
             }
+            // if first token is MSG, create msg packet and return it
             else if(packetType == "MSG"){
                 //TODO FIX
                 if(tokens.size() < 5){
@@ -436,7 +450,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                     std::cout << "Invalid number of arguments" << std::endl;
                     exit(1);
                 }
-                // i want every token from 4 to the end
+                // i want every token from 4 to the end for content
                 std::string content = "";
                 for (std::vector<std::string>::size_type i = 4; i < tokens.size(); ++i) {
                     content += tokens[i];
@@ -447,6 +461,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 MsgPacket msgPacket(tokens[2], content);
                 return msgPacket;
             }
+            //if it is BYE, end connection
             else if(packetType == "BYE"){
                 //TODO throw exception
                 if(tokens.size() < 1){
@@ -461,33 +476,39 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
                 return NullPacket();                            
             }
         }
-        //TODO throw exception
         return NullPacket();    
     }
+    //in case of UDP
     else if(connection.protocol == Connection::Protocol::UDP){
         // Convert data to vector of bytes
         std::vector<uint8_t> data_bytes(data.begin(), data.end());
         uint8_t first_byte = data_bytes[0];
+        //checking first byte for type of message
         switch(first_byte){
+            //create confirm packet and return it
             case 0x00:{
                 ConfirmPacket confirm_packet(data_bytes);
                 return confirm_packet;
                 break;
                 }
+            //create reply packet and return it
             case 0x01:{
                 ReplyPacket reply_packet(data_bytes);
                 return reply_packet;
                 break;
                 }
+            //create error packet and return it
             case 0xFE:{
                 ErrorPacket error_packet(data_bytes);
                 return error_packet;
                 break;
                 }
+            //create msg packet and return it
             case 0x04:{
                 MsgPacket msg_packet(data_bytes);
                 return msg_packet;
             }
+            //end if bye packet
             case 0xF:{
                 std::cout << "Received BYE packet, ending connection" << std::endl;
                 exit(1);
@@ -504,7 +525,7 @@ std::variant<RECV_PACKET_TYPE> ReceiveParser(const std::string data, Connection 
 }
 
 
-
+//serializing bye packet
 std::string ByePacket::serialize(Connection &connection) {
     if(connection.protocol == Connection::Protocol::TCP){
         return "BYE" + CRLF;

@@ -6,7 +6,7 @@ Matej Olexa (xolexa03) 1.4.2024
 [Popis](#popis)  
 [Spustenie](#Spustenie)  
 [Zoznam odovzdaných súborov](#Zoznam-odovzdaných-súborov)  
-[]
+
 ## Popis
 
 Implementácia chatovacieho klienta ktorý pomocou použitia IPK24-CHAT[1] protokolu komunikuje s príslušným serverom. Implementácia je robená pre protokoly TCP a UDP.
